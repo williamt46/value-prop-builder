@@ -642,44 +642,18 @@
             const graph = document.getElementById('need_graph');
             const marker = document.getElementById('graph_marker');
             const statusEl = document.getElementById('graph_status');
-            
+
             let isDragging = false;
 
-            // Load saved pos
-            const savedX = localStorage.getItem('vprop_v4_graph_x') || 50;
-            const savedY = localStorage.getItem('vprop_v4_graph_y') || 50;
-            
-            setMarker(parseFloat(savedX), parseFloat(savedY));
+            const savedX = parseFloat(localStorage.getItem('vprop_v4_graph_x') || 50);
+            const savedY = parseFloat(localStorage.getItem('vprop_v4_graph_y') || 50);
+            setMarker(savedX, savedY);
 
             function updateStatus(xPercent, yPercent) {
-                // Coordinate Logic:
-                // xPercent 0-50% = 0 < x < 1 (Latent)
-                // xPercent 50-100% = 1 < x < 2 (Blatant)
-                // yPercent 0-50% = 1 < y < 2 (Critical - because Top is 0%)
-                // yPercent 50-100% = 0 < y < 1 (Aspirational)
-
-                let yLabel = "";
-                let xLabel = "";
-                let colorClass = "text-slate-600";
-                
-                // Y-Axis Check
-                if (yPercent < 50) {
-                    yLabel = "Critical";
-                    colorClass = "text-rose-600"; // Highlight Critical
-                } else {
-                    yLabel = "Aspirational";
-                    colorClass = "text-slate-500";
-                }
-
-                // X-Axis Check
-                if (xPercent < 50) {
-                    xLabel = "Latent";
-                } else {
-                    xLabel = "Blatant";
-                }
-                
-                statusEl.innerText = `${yLabel} & ${xLabel}`;
-                statusEl.className = "font-bold " + colorClass;
+                const yLabel = yPercent < 50 ? "Critical" : "Aspirational";
+                const xLabel = xPercent < 50 ? "Latent" : "Blatant";
+                statusEl.textContent = `${yLabel} & ${xLabel}`;
+                statusEl.className = "font-bold " + (yPercent < 50 ? "text-rose-600" : "text-slate-500");
             }
 
             function setMarker(x, y) {
@@ -688,39 +662,44 @@
                 updateStatus(x, y);
             }
 
-            // ... mouse event listeners remain the same ...
-            graph.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                move(e);
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                move(e);
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    save(); // Save on drop
-                }
-            });
+            function getCoords(e) {
+                const rect = graph.getBoundingClientRect();
+                const src = e.touches ? e.touches[0] : e;
+                return {
+                    x: Math.max(0, Math.min(100, ((src.clientX - rect.left) / rect.width) * 100)),
+                    y: Math.max(0, Math.min(100, ((src.clientY - rect.top) / rect.height) * 100))
+                };
+            }
 
             function move(e) {
-                const rect = graph.getBoundingClientRect();
-                let x = ((e.clientX - rect.left) / rect.width) * 100;
-                let y = ((e.clientY - rect.top) / rect.height) * 100;
-
-                // Clamp
-                x = Math.max(0, Math.min(100, x));
-                y = Math.max(0, Math.min(100, y));
-
+                e.preventDefault();
+                const { x, y } = getCoords(e);
                 setMarker(x, y);
-                
-                // Save coordinates
                 localStorage.setItem('vprop_v4_graph_x', x);
                 localStorage.setItem('vprop_v4_graph_y', y);
             }
+
+            function startDrag(e) {
+                isDragging = true;
+                move(e);
+            }
+
+            function endDrag() {
+                if (isDragging) {
+                    isDragging = false;
+                    save();
+                }
+            }
+
+            // Mouse — click anywhere on graph to place, or drag the marker
+            graph.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', (e) => { if (isDragging) move(e); });
+            document.addEventListener('mouseup', endDrag);
+
+            // Touch — drag the marker on mobile
+            graph.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('touchmove', (e) => { if (isDragging) move(e); }, { passive: false });
+            document.addEventListener('touchend', endDrag);
         }
 
         // 1. Check if Storage is even possible
@@ -798,31 +777,11 @@
                     const y = parseFloat(data['graph_y'] || 50);
                     const marker = document.getElementById('graph_marker');
                     const statusEl = document.getElementById('graph_status');
-                    
+
                     marker.style.left = x + '%';
                     marker.style.top = y + '%';
-                    
-                    let yLabel = "";
-                    let xLabel = "";
-                    let colorClass = "text-slate-600";
-
-                    // Match logic from initGraph
-                    if (y < 50) {
-                        yLabel = "Critical";
-                        colorClass = "text-rose-600";
-                    } else {
-                        yLabel = "Aspirational";
-                        colorClass = "text-slate-500";
-                    }
-
-                    if (x < 50) {
-                        xLabel = "Latent";
-                    } else {
-                        xLabel = "Blatant";
-                    }
-
-                    statusEl.innerText = `${yLabel} & ${xLabel}`;
-                    statusEl.className = "font-bold " + colorClass;
+                    statusEl.textContent = `${y < 50 ? "Critical" : "Aspirational"} & ${x < 50 ? "Latent" : "Blatant"}`;
+                    statusEl.className = "font-bold " + (y < 50 ? "text-rose-600" : "text-slate-500");
 
                     calculateRatio();
                     showToast("Restored successfully!");
