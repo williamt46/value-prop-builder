@@ -12,6 +12,7 @@
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "docx": "^9.15.0",
+    "jose": "^6.2.13",
     "pdf-lib": "^1.17.1"
   }
 }

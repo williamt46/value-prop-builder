@@ -9,6 +9,11 @@ const routes = [
   [/^\/api\/workbooks$/, () => import('./api/workbooks.js')],
   [/^\/api\/workbooks\/[^/]+$/, () => import('./api/workbooks/[id].js')],
   [/^\/api\/export$/, () => import('./api/export.js')],
+  [/^\/api\/ai$/, () => import('./api/ai.js')],
+  [/^\/api\/auth\/openai$/, () => import('./api/auth/openai.js')],
+  [/^\/api\/auth\/openai\/callback$/, () => import('./api/auth/openai/callback.js')],
+  [/^\/api\/auth\/me$/, () => import('./api/auth/me.js')],
+  [/^\/api\/auth\/logout$/, () => import('./api/auth/logout.js')],
 ];
 
 const vercel = JSON.parse(await readFile(new URL('./vercel.json', import.meta.url), 'utf8'));
@@ -27,7 +32,9 @@ async function toRequest(req) {
 
 async function send(res, response) {
   res.statusCode = response.status;
-  response.headers.forEach((value, key) => res.setHeader(key, value));
+  response.headers.forEach((value, key) => { if (key !== 'set-cookie') res.setHeader(key, value); });
+  const cookies = response.headers.getSetCookie();
+  if (cookies.length) res.setHeader('Set-Cookie', cookies);
   res.end(Buffer.from(await response.arrayBuffer()));
 }
 
