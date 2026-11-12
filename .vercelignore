@@ -1,0 +1,5 @@
+# The coach runs only on a local dev server (it uses the owner's Claude Code login).
+api/coach.js
+api/coach/
+lib/coach.js
+coach/
