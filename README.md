@@ -25,7 +25,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Workbooks are stored in `data/workbooks.db`, a local SQLite file that git ignores.
+Open http://127.0.0.1:3000 (`localhost` redirects there). Workbooks are stored in `data/workbooks.db`, a local SQLite file that git ignores. The server listens on `127.0.0.1` only; set `HOST=0.0.0.0` to expose it on your network, which turns local ChatGPT sign-in off.
+
+**AI features when running locally:** click **Continue with ChatGPT** in the sidebar and sign in. Eligible ChatGPT Plus and Pro accounts then run mentor feedback and pitches on their own plan, with no API key or OpenAI approval needed. This uses OpenAI's [ChatGPT plan usage for open-source apps](https://developers.openai.com/siwc/token-sharing-open-source), which registers this install with your ChatGPT account on first sign-in. Review or limit its usage in [ChatGPT settings → Usage](https://chatgpt.com/settings/usage). Set `OPENAI_LOCAL_SIGNIN=false` to turn it off.
 
 **Deploy to Vercel**
 
@@ -36,7 +38,7 @@ Vercel's filesystem doesn't persist, so production uses [Turso](https://turso.te
 
 The tables are created automatically on first request.
 
-**Sign in with ChatGPT (AI features)**
+**Sign in with ChatGPT on the hosted site**
 
 AI requests run on the signed-in user's own ChatGPT plan through OpenAI's [Sign in with ChatGPT](https://developers.openai.com/siwc/quickstart). OpenAI issues client IDs to approved partners only:
 
@@ -52,7 +54,7 @@ AI requests run on the signed-in user's own ChatGPT plan through OpenAI's [Sign 
 | `SESSION_SECRET` | in production | Long random string used to encrypt stored OpenAI tokens |
 | `OPENAI_MODEL` | no | Pin a model; by default the first model on the user's list is used |
 
-Without `OPENAI_CLIENT_ID`, the site works normally and the AI buttons explain that sign-in isn't set up. OpenAI tokens stay on the server, encrypted, and the browser only holds an HttpOnly session cookie.
+Without `OPENAI_CLIENT_ID`, the hosted site works normally and hides its AI features. Local mode never runs on Vercel. OpenAI tokens stay on the server, encrypted, and the browser only holds an HttpOnly session cookie.
 
 **API**
 

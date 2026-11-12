@@ -102,6 +102,9 @@
             border-radius: 50%;
             display: inline-block;
         }
+        /* AI features stay hidden until /api/auth/me reports a sign-in method (body.ai-off) */
+        .ai-off .ai-feature { display: none !important; }
+
         .status-ok { background-color: #10b981; }
         .status-warn { background-color: #f59e0b; }
         .status-err { background-color: #ef4444; }
@@ -120,7 +123,7 @@
         }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 ai-off">
 
     <div class="flex flex-col lg:flex-row min-h-screen">
         <!-- Sidebar -->
@@ -182,23 +185,23 @@
                 <div class="h-px bg-slate-200"></div>
 
                 <!-- Sign in with ChatGPT: AI features run on the user's own ChatGPT plan -->
-                <div id="account-panel" class="space-y-2">
+                <div id="account-panel" class="ai-feature space-y-2">
                     <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">AI features</p>
                     <div id="account-signed-out" class="hidden space-y-2">
                         <a id="chatgpt-signin" href="/api/auth/openai" class="w-full bg-black text-white py-2.5 rounded-lg hover:bg-slate-800 transition-all flex items-center justify-center text-xs font-bold shadow-sm">
                             Continue with ChatGPT
                         </a>
-                        <p class="text-[10px] text-slate-500 leading-snug">Use your own ChatGPT plan for mentor feedback and pitches.</p>
+                        <p class="text-[10px] text-slate-500 leading-snug">Use your own ChatGPT plan for mentor feedback and pitches. Requires ChatGPT Plus or Pro.</p>
+                        <a id="chatgpt-other-account" href="/api/auth/openai?account=new" class="hidden block text-[10px] text-slate-500 hover:text-slate-800 underline">Use a different ChatGPT account</a>
                     </div>
                     <div id="account-signed-in" class="hidden space-y-1.5">
                         <p class="text-xs text-slate-700 truncate"><span class="font-semibold" id="account-name"></span></p>
                         <p id="account-plan" class="text-[10px] text-slate-500"></p>
                         <button onclick="signOut()" class="text-[11px] text-slate-500 hover:text-slate-800">Sign out</button>
                     </div>
-                    <p id="account-unconfigured" class="hidden text-[10px] text-slate-500 leading-snug">AI sign-in isn't set up on this site yet.</p>
                 </div>
 
-                <button onclick="runCritique()" class="w-full bg-slate-900 text-white py-3 rounded-lg hover:bg-black transition-all flex items-center justify-center text-sm font-medium">
+                <button onclick="runCritique()" class="ai-feature w-full bg-slate-900 text-white py-3 rounded-lg hover:bg-black transition-all flex items-center justify-center text-sm font-medium">
                     Mentor Critique
                 </button>
                 <button onclick="clearAll()" class="w-full text-red-400 text-[10px] hover:text-red-600">
@@ -239,7 +242,7 @@
                 <div class="glass-card p-6 rounded-xl shadow-sm mb-6 relative group">
                     <div class="flex justify-between items-start mb-2">
                         <label class="block text-sm font-semibold text-slate-700">The Minimum Viable Segment (MVS)</label>
-                        <button onclick="refineWithAI('mvs_narrative', 'Suggest a highly specific Minimum Viable Segment based on my problem. Think smaller and more repeatable.')" class="opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-blue-200 text-blue-600 px-2 py-1 rounded text-xs hover:bg-blue-50 font-medium">
+                        <button onclick="refineWithAI('mvs_narrative', 'Suggest a highly specific Minimum Viable Segment based on my problem. Think smaller and more repeatable.')" class="ai-feature opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-blue-200 text-blue-600 px-2 py-1 rounded text-xs hover:bg-blue-50 font-medium">
                             Brainstorm MVS
                         </button>
                     </div>
@@ -255,7 +258,7 @@
                         <span class="bg-amber-100 text-amber-600 p-2 rounded-lg mr-4"><i class="fas fa-exclamation-triangle"></i></span>
                         The Four U's of Problem Evaluation
                     </h3>
-                    <button onclick="refineWithAI('all-us', 'Review my description of the 4 Us. Tell me which one is strongest and which needs more evidence.')" class="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-200 text-xs font-bold hover:bg-amber-100">
+                    <button onclick="refineWithAI('all-us', 'Review my description of the 4 Us. Tell me which one is strongest and which needs more evidence.')" class="ai-feature bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-200 text-xs font-bold hover:bg-amber-100">
                         analyze severity
                     </button>
                 </div>
@@ -274,7 +277,7 @@
                                     </div>
                                 </div>
                             </h4>
-                            <button onclick="refineWithAI('unworkable_txt', 'Refine this text to focus more on the systemic friction and quantifiable loss.')" class="opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
+                            <button onclick="refineWithAI('unworkable_txt', 'Refine this text to focus more on the systemic friction and quantifiable loss.')" class="ai-feature opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-4">The current situation is broken or inefficient.</p>
                         <textarea id="unworkable_txt" oninput="save()" class="w-full p-3 text-sm border border-slate-200 rounded-lg"></textarea>
@@ -293,7 +296,7 @@
                                     </div>
                                 </div>
                             </h4>
-                            <button onclick="refineWithAI('unavoidable_txt', 'Explain the external pressures or mandates more clearly.')" class="opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
+                            <button onclick="refineWithAI('unavoidable_txt', 'Explain the external pressures or mandates more clearly.')" class="ai-feature opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-4">The customer has to solve this (mandates/laws).</p>
                         <textarea id="unavoidable_txt" oninput="save()" class="w-full p-3 text-sm border border-slate-200 rounded-lg"></textarea>
@@ -303,7 +306,7 @@
                     <div class="glass-card p-6 rounded-xl shadow-sm relative group">
                         <div class="flex justify-between items-start">
                             <h4 class="font-bold text-slate-900 mb-1">Urgent</h4>
-                            <button onclick="refineWithAI('urgent_txt', 'Make the cost of delay feel more visceral.')" class="opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
+                            <button onclick="refineWithAI('urgent_txt', 'Make the cost of delay feel more visceral.')" class="ai-feature opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-4">The problem requires immediate attention.</p>
                         <textarea id="urgent_txt" oninput="save()" class="w-full p-3 text-sm border border-slate-200 rounded-lg"></textarea>
@@ -313,7 +316,7 @@
                     <div class="glass-card p-6 rounded-xl shadow-sm relative group">
                         <div class="flex justify-between items-start">
                             <h4 class="font-bold text-slate-900 mb-1">Underserved</h4>
-                            <button onclick="refineWithAI('underserved_txt', 'Clarify why incumbents are physically or technically unable to solve this.')" class="opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
+                            <button onclick="refineWithAI('underserved_txt', 'Clarify why incumbents are physically or technically unable to solve this.')" class="ai-feature opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-4">Existing solutions don't adequately address the need.</p>
                         <textarea id="underserved_txt" oninput="save()" class="w-full p-3 text-sm border border-slate-200 rounded-lg"></textarea>
@@ -331,7 +334,7 @@
                 </div>
 
                 <div class="glass-card p-4 lg:p-8 rounded-xl shadow-sm relative group">
-                    <button onclick="refineWithAI('need_alignment', 'Evaluate if this is truly a blatant and critical need (penicillin) or just a latent and aspirational desire (vitamin). Give me brutal feedback.')" class="absolute top-4 right-4 bg-white border border-rose-200 text-rose-600 px-2 py-1 rounded text-xs font-bold shadow-sm z-10">
+                    <button onclick="refineWithAI('need_alignment', 'Evaluate if this is truly a blatant and critical need (penicillin) or just a latent and aspirational desire (vitamin). Give me brutal feedback.')" class="ai-feature absolute top-4 right-4 bg-white border border-rose-200 text-rose-600 px-2 py-1 rounded text-xs font-bold shadow-sm z-10">
                         Vitamin vs Penicillin Check
                     </button>
                     
@@ -409,7 +412,7 @@
                         <span class="bg-indigo-100 text-indigo-600 p-2 rounded-lg mr-4"><i class="fas fa-shield-alt"></i></span>
                         The Three D's
                     </h3>
-                    <button onclick="refineWithAI('defensibility-summary', 'Analyze my 3Ds. Do I have a real moat or just a feature? Suggest one way to increase switching costs.')" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-200 text-xs font-bold">
+                    <button onclick="refineWithAI('defensibility-summary', 'Analyze my 3Ds. Do I have a real moat or just a feature? Suggest one way to increase switching costs.')" class="ai-feature bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-200 text-xs font-bold">
                         analyze moats
                     </button>
                 </div>
@@ -428,7 +431,7 @@
                                     </div>
                                 </div>
                             </h4>
-                            <button onclick="refineWithAI('disruptive_txt', 'Is this truly disruptive (cheaper/faster) or just different?')" class="opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
+                            <button onclick="refineWithAI('disruptive_txt', 'Is this truly disruptive (cheaper/faster) or just different?')" class="ai-feature opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-3">How does this product change the market economics?</p>
                         <textarea id="disruptive_txt" oninput="save()" class="w-full p-3 border border-slate-100 rounded-lg text-sm"></textarea>
@@ -448,7 +451,7 @@
                                     </div>
                                 </div>
                             </h4>
-                            <button onclick="refineWithAI('discontinuous_txt', 'Does this enable the impossible?')" class="opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
+                            <button onclick="refineWithAI('discontinuous_txt', 'Does this enable the impossible?')" class="ai-feature opacity-0 group-hover:opacity-100 text-[10px] text-blue-500 font-bold">REFINE</button>
                         </div>
                         <p class="text-xs text-slate-500 mb-3">What can users do now that they absolutely could not do before?</p>
                         <textarea id="discontinuous_txt" oninput="save()" class="w-full p-3 border border-slate-100 rounded-lg text-sm"></textarea>
@@ -590,12 +593,12 @@
             </section>
 
             <!-- Final AI Summary -->
-            <section class="mt-20 pt-10 border-t border-slate-200">
+            <section class="ai-feature mt-20 pt-10 border-t border-slate-200">
                 <div class="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-2xl">
                     <div class="relative z-10">
                         <h3 class="text-2xl font-bold mb-2">Ready to pitch?</h3>
                         <p class="text-slate-400 mb-6 max-w-lg">Use your ChatGPT plan to synthesize your entire workbook into a compelling 30-second elevator pitch that focuses on the Gain-Pain ratio.</p>
-                        <button onclick="generatePitch()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl transition-all flex items-center shadow-lg">
+                        <button onclick="generatePitch()" class="ai-feature bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl transition-all flex items-center shadow-lg">
                             Generate Executive Pitch
                         </button>
                     </div>
@@ -1103,7 +1106,7 @@
         }
 
         const AUTH_ERRORS = {
-            denied: 'Sign in with ChatGPT was cancelled.',
+            denied: 'Sign in with ChatGPT was cancelled. AI features use your ChatGPT plan, which requires ChatGPT Plus or Pro.',
             expired: 'That sign-in attempt expired. Please try again.',
             not_configured: "Sign in with ChatGPT isn't set up on this site yet.",
             failed: "Sign in with ChatGPT didn't complete. Please try again."
@@ -1120,6 +1123,8 @@
                 profile = { ...profile, name: account.name, email: profile.email || account.email || '' };
                 store.setJson('profile', profile);
             }
+            // Show AI features only where a sign-in method exists (hosted client ID or local mode).
+            document.body.classList.toggle('ai-off', !account.configured && !account.signedIn);
             updateAccountUI();
 
             if (authResult.error) alertCustom(AUTH_ERRORS[authResult.error] || AUTH_ERRORS.failed);
@@ -1133,15 +1138,20 @@
             document.getElementById('plan-welcome-modal').style.display = 'none';
         }
 
-        function signInUrl() {
-            return `/api/auth/openai?returnTo=${encodeURIComponent(location.pathname + location.search)}`;
+        // extra: { account: 'new' } signs in a different ChatGPT account (local mode);
+        // { consent: '1' } asks OpenAI to show the plan-usage permission again.
+        function signInUrl(extra = {}) {
+            const params = new URLSearchParams({ returnTo: location.pathname + location.search, ...extra });
+            return `/api/auth/openai?${params}`;
         }
 
         function updateAccountUI() {
             document.getElementById('account-signed-out').classList.toggle('hidden', account.signedIn || !account.configured);
-            document.getElementById('account-unconfigured').classList.toggle('hidden', account.signedIn || account.configured);
             document.getElementById('account-signed-in').classList.toggle('hidden', !account.signedIn);
             document.getElementById('chatgpt-signin').onclick = (e) => { e.currentTarget.href = signInUrl(); };
+            const otherAccount = document.getElementById('chatgpt-other-account');
+            otherAccount.classList.toggle('hidden', account.mode !== 'local' || !account.savedAccount);
+            otherAccount.onclick = (e) => { e.currentTarget.href = signInUrl({ account: 'new' }); };
             if (!account.signedIn) return;
 
             document.getElementById('account-name').textContent = account.name || account.email || 'ChatGPT account';
@@ -1228,7 +1238,10 @@
                         [{ label: 'Manage usage', href: MANAGE_USAGE_URL, primary: true, external: true }]);
                     break;
                 case 'plan_usage_disabled':
-                    showModalMessage(result.error);
+                    // Local mode can ask for the permission again; hosted mode waits on OpenAI approval.
+                    showModalMessage(result.error, account.mode === 'local'
+                        ? [{ label: 'Enable ChatGPT plan usage', href: signInUrl({ consent: '1' }), primary: true }]
+                        : []);
                     break;
                 default:
                     showModalMessage(result.error || 'The AI request failed. Please try again.');

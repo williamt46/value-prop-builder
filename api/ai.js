@@ -17,7 +17,7 @@ function planError(status, code) {
     case 'subscription_sharing_usage_limit_exceeded':
       return new HttpError(429, "You've reached your ChatGPT usage limit for this app.", 'usage_limit');
     case 'subscription_sharing_user_not_eligible':
-      return new HttpError(403, "Your ChatGPT account isn't eligible to use its plan in this app.", 'not_eligible');
+      return new HttpError(403, "Your ChatGPT account isn't eligible to use its plan in this app. This requires ChatGPT Plus or Pro.", 'not_eligible');
     case 'subscription_sharing_invalid_user':
       return new HttpError(401, 'Your ChatGPT session expired. Please sign in again.', 'reauth');
     case 'subscription_sharing_usage_unavailable':

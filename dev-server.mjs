@@ -4,6 +4,8 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 
 const PORT = Number(process.env.PORT) || 3000;
+// Loopback only by default: the server can hold a ChatGPT session. HOST=0.0.0.0 to expose it.
+const HOST = process.env.HOST || '127.0.0.1';
 
 const routes = [
   [/^\/api\/workbooks$/, () => import('./api/workbooks.js')],
@@ -12,6 +14,8 @@ const routes = [
   [/^\/api\/ai$/, () => import('./api/ai.js')],
   [/^\/api\/auth\/openai$/, () => import('./api/auth/openai.js')],
   [/^\/api\/auth\/openai\/callback$/, () => import('./api/auth/openai/callback.js')],
+  // Local Sign in with ChatGPT: OpenAI's open-source flow requires this exact callback path.
+  [/^\/auth\/callback$/, () => import('./api/auth/openai/callback.js')],
   [/^\/api\/auth\/me$/, () => import('./api/auth/me.js')],
   [/^\/api\/auth\/logout$/, () => import('./api/auth/logout.js')],
 ];
@@ -23,7 +27,7 @@ async function toRequest(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   const body = chunks.length ? Buffer.concat(chunks) : undefined;
-  return new Request(`http://localhost:${PORT}${req.url}`, {
+  return new Request(`http://${req.headers.host}${req.url}`, {
     method: req.method,
     headers: req.headers,
     body: ['GET', 'HEAD'].includes(req.method) ? undefined : body,
@@ -39,6 +43,11 @@ async function send(res, response) {
 }
 
 http.createServer(async (req, res) => {
+  // Local ChatGPT sign-in must run on 127.0.0.1, not localhost; keep the whole app on one origin.
+  if (/^localhost(:|$)/i.test(req.headers.host || '')) {
+    res.writeHead(302, { Location: `http://127.0.0.1:${PORT}${req.url}` });
+    return res.end();
+  }
   for (const { key, value } of globalHeaders) res.setHeader(key, value);
   const { pathname } = new URL(req.url, 'http://localhost');
 
@@ -55,4 +64,4 @@ http.createServer(async (req, res) => {
   }
   res.statusCode = 404;
   res.end('Not found');
-}).listen(PORT, () => console.log(`Value Prop Builder running at http://localhost:${PORT}`));
+}).listen(PORT, HOST, () => console.log(`Value Prop Builder running at http://127.0.0.1:${PORT}`));
