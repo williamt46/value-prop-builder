@@ -693,6 +693,14 @@
         </div>
     </div>
 
+    <!-- Coach chat tab: reopens the panel; red dot = the coach said something while it was hidden -->
+    <button id="coach-tab" onclick="reopenCoach()" class="coach-feature no-print hidden fixed right-0 top-1/2 -translate-y-1/2 z-[180] bg-slate-900 text-white rounded-l-xl shadow-xl px-2 py-4 flex flex-col items-center gap-2 hover:bg-black" aria-label="Open coach chat">
+        <span id="coach-tab-dot" class="hidden absolute -top-1.5 -left-1.5 h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white" aria-hidden="true"></span>
+        <i class="fas fa-comments text-sm"></i>
+        <span class="text-xs font-bold tracking-wider" style="writing-mode: vertical-rl;">Chat</span>
+        <span id="coach-tab-sr" class="sr-only"></span>
+    </button>
+
     <!-- Coach panel (local only) -->
     <aside id="coach-panel" class="coach-feature no-print fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white border-l border-slate-200 shadow-2xl z-[190] flex flex-col" aria-label="Coach" aria-hidden="true">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -1442,6 +1450,8 @@
         let coachUndo = coach?.undo || null; // field values from before the coach's first fill this session
         let coachBubble = null; // { el, text } for the assistant message being streamed
         let coachWaiting = false; // a question card is waiting for the founder
+        let coachUnread = false;  // the coach replied while the panel was hidden
+        let coachRendered = null; // which conversation the panel log currently shows
 
         function coachKey(mode, path) { return mode === 'ceo-review' ? 'ceo-review' : `office-hours:${path}`; }
         function saveCoach() { store.setJson('coach', coach); }
@@ -1452,10 +1462,16 @@
                 if (coachBusy) { showToast('The coach is still working. Close it or wait for it to finish first.'); }
                 else { coach = { mode, path: mode === 'office-hours' ? path : null, sessionId: null, log: [] }; coachUndo = null; saveCoach(); }
             }
-            renderCoach();
+            // Re-render only for a different conversation: a rebuild would drop a reply that is
+            // still streaming and any question card waiting for an answer.
+            const renderKey = coachKey(coach.mode, coach.path) + ':' + (coach.sessionId || 'new') + ':' + coach.log.length;
+            if (!coachRendered || coachRendered.key !== coachKey(coach.mode, coach.path) || (!coachBusy && coachRendered.full !== renderKey)) renderCoach();
+            coachRendered = { key: coachKey(coach.mode, coach.path), full: renderKey };
             const panel = document.getElementById('coach-panel');
             panel.classList.add('open');
             panel.setAttribute('aria-hidden', 'false');
+            setCoachUnread(false);
+            updateCoachTab();
             // Guided and CEO review start straight away; brain dump waits for the paste.
             const autoStart = !coach.sessionId && !coachBusy && !coach.log.length && (coach.mode === 'ceo-review' || coach.path === 'guided');
             if (autoStart) runCoachTurn('');
@@ -1465,14 +1481,36 @@
             const panel = document.getElementById('coach-panel');
             panel.classList.remove('open');
             panel.setAttribute('aria-hidden', 'true');
+            updateCoachTab();
         }
+
+        function coachPanelOpen() { return document.getElementById('coach-panel').classList.contains('open'); }
+
+        // The right-edge Chat tab shows once a coach conversation is opened, whenever the panel is hidden.
+        function updateCoachTab() {
+            const show = !!coach && !coachPanelOpen();
+            document.getElementById('coach-tab').classList.toggle('hidden', !show);
+        }
+
+        function reopenCoach() { if (coach) openCoach(coach.mode, coach.path); }
+
+        function setCoachUnread(on) {
+            coachUnread = on;
+            document.getElementById('coach-tab-dot').classList.toggle('hidden', !on);
+            document.getElementById('coach-tab-sr').textContent = on ? 'New message from the coach' : '';
+        }
+
+        // Called when the coach says or asks something; flags it on the tab if the panel is hidden.
+        function notifyCoach() { if (!coachPanelOpen()) setCoachUnread(true); }
 
         function resetCoach() {
             if (coachBusy && !confirm('Stop the coach and start over?')) return;
             coachAbort?.abort();
             const { mode, path } = coach || { mode: 'office-hours', path: 'guided' };
             coach = null;
+            coachRendered = null;
             store.remove('coach');
+            setCoachUnread(false);
             openCoach(mode, path);
         }
 
@@ -1639,6 +1677,7 @@
                 setCoachStatus('');
                 updateCoachControls();
                 saveCoach();
+                updateCoachTab();
             }
         }
 
@@ -1655,7 +1694,7 @@
                     setCoachStatus('Thinking…');
                     break;
                 case 'text':
-                    if (!coachBubble) coachBubble = { el: appendCoachEntry({ role: 'assistant', text: '' }), text: '' };
+                    if (!coachBubble) { coachBubble = { el: appendCoachEntry({ role: 'assistant', text: '' }), text: '' }; notifyCoach(); }
                     coachBubble.text += ev.delta;
                     coachBubble.el.innerHTML = coachMarkdown(coachBubble.text);
                     setCoachStatus('');
@@ -1671,15 +1710,18 @@
                 case 'fill':
                     applyCoachFill(ev.fields);
                     pushCoach({ role: 'fill', fields: ev.fields, note: ev.note });
+                    notifyCoach();
                     break;
                 case 'question':
                     finishCoachBubble();
                     coachWaiting = true;
                     setCoachStatus('Waiting for your answer…');
                     renderCoachQuestion(ev);
+                    notifyCoach();
                     break;
                 case 'error':
                     pushCoach({ role: 'error', text: ev.message });
+                    notifyCoach();
                     break;
                 case 'done':
                     if (ev.sessionId) coach.sessionId = ev.sessionId;
@@ -1828,6 +1870,7 @@
 
         // A stored session whose stream ended with the page (reload) is resumable, not running.
         if (coach?.sessionId) { coach.paused = true; saveCoach(); }
+        document.addEventListener('DOMContentLoaded', updateCoachTab);
     </script>
 </body>
 </html>
