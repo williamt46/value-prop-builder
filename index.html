@@ -108,6 +108,10 @@
         .coach-off .coach-feature { display: none !important; }
         .coach-filled { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45); transition: box-shadow 0.4s; }
         #coach-panel { transform: translateX(100%); transition: transform 0.25s ease; }
+        #coach-tabs { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 195; display: flex; flex-direction: column; gap: 8px; transition: right 0.25s ease; }
+        #coach-tabs:empty { display: none; }
+        body.coach-open #coach-tabs { right: 460px; }
+        @media (max-width: 639px) { body.coach-open #coach-tabs { display: none; } }
         #coach-panel.open { transform: translateX(0); }
         .coach-md code { background: #f1f5f9; padding: 0 4px; border-radius: 4px; font-size: 0.85em; }
 
@@ -693,13 +697,9 @@
         </div>
     </div>
 
-    <!-- Coach chat tab: reopens the panel; red dot = the coach said something while it was hidden -->
-    <button id="coach-tab" onclick="reopenCoach()" class="coach-feature no-print hidden fixed right-0 top-1/2 -translate-y-1/2 z-[180] bg-slate-900 text-white rounded-l-xl shadow-xl px-2 py-4 flex flex-col items-center gap-2 hover:bg-black" aria-label="Open coach chat">
-        <span id="coach-tab-dot" class="hidden absolute -top-1.5 -left-1.5 h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white" aria-hidden="true"></span>
-        <i class="fas fa-comments text-sm"></i>
-        <span class="text-xs font-bold tracking-wider" style="writing-mode: vertical-rl;">Chat</span>
-        <span id="coach-tab-sr" class="sr-only"></span>
-    </button>
+    <!-- Coach chat tabs: one per conversation (guided, brain dump, CEO review). Red dot = the
+         coach said something in that conversation while it was not on screen. -->
+    <div id="coach-tabs" class="coach-feature no-print" aria-label="Coach conversations"></div>
 
     <!-- Coach panel (local only) -->
     <aside id="coach-panel" class="coach-feature no-print fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white border-l border-slate-200 shadow-2xl z-[190] flex flex-col" aria-label="Coach" aria-hidden="true">
@@ -793,7 +793,7 @@
             if (url.searchParams.get('coach') === '1') {
                 url.searchParams.delete('coach');
                 history.replaceState(null, '', url);
-                if (account.coach && coach) openCoach(coach.mode, coach.path);
+                if (account.coach) reopenCoach();
             }
         });
 
@@ -1428,123 +1428,197 @@
 
         function clearAll() {
             if (confirm('Clear everything and start a new workbook? Saved workbooks stay available at their share links.')) {
-                [...fields, 'current', 'dirty', 'saved_at', 'coach'].forEach(key => store.remove(key));
+                [...fields, 'current', 'dirty', 'saved_at', 'coach', 'coach_convs', 'coach_active'].forEach(key => store.remove(key));
                 location.href = location.pathname;
             }
         }
 
         // --- Coach (local only): gstack office hours and CEO review over /api/coach (SSE) ---
-        // Conversation state lives in device storage so a reload can resume the session.
-        const COACH_TITLES = {
-            'office-hours:guided': ['Office hours: guided', 'One question at a time. Answers fill the workbook as they settle.'],
-            'office-hours:braindump': ['Office hours: brain dump', 'Paste raw notes; the coach maps them into the workbook.'],
-            'ceo-review': ['CEO review', 'Reviews the whole workbook as a plan. Read-only: it never edits fields.'],
+        // Each kind (guided, brain dump, CEO review) is its own conversation with its own tab, so
+        // they can run side by side. Saved state lives in device storage (coach_convs); runtime
+        // state (running fetch, streaming bubble, unread dot) lives in coachRt.
+        const COACH_KINDS = {
+            'office-hours:guided': { mode: 'office-hours', path: 'guided', tab: 'Guided', title: 'Office hours: guided', subtitle: 'One question at a time. Answers fill the workbook as they settle.' },
+            'office-hours:braindump': { mode: 'office-hours', path: 'braindump', tab: 'Brain dump', title: 'Office hours: brain dump', subtitle: 'Paste raw notes; the coach maps them into the workbook.' },
+            'ceo-review': { mode: 'ceo-review', path: null, tab: 'CEO', title: 'CEO review', subtitle: 'Reviews the whole workbook as a plan. Read-only: it never edits fields.' },
         };
         const TOOL_STATUS = {
             Read: 'Reading the method…', Grep: 'Reading the method…', Glob: 'Reading the method…', Skill: 'Starting the session…',
             WebSearch: 'Searching the web…', mcp__workbook__fill_workbook: 'Filling your workbook…',
         };
-        let coach = store.getJson('coach', null); // { mode, path, sessionId, log: [{role, text} | {role:'fill', fields, note} | {role:'answer', text}] }
-        let coachBusy = false;
-        let coachAbort = null;
-        let coachUndo = coach?.undo || null; // field values from before the coach's first fill this session
-        let coachBubble = null; // { el, text } for the assistant message being streamed
-        let coachWaiting = false; // a question card is waiting for the founder
-        let coachUnread = false;  // the coach replied while the panel was hidden
-        let coachRendered = null; // which conversation the panel log currently shows
+        // Same labels as lib/fields.js SECTIONS.
+        const FIELD_LABELS = {
+            mvs_narrative: 'MVS', unworkable_txt: 'Unworkable', unavoidable_txt: 'Unavoidable', urgent_txt: 'Urgent', underserved_txt: 'Underserved',
+            maslow_narrative: 'Human need', graph_text: 'Needs map narrative', graph_x: 'needs map', graph_y: 'needs map',
+            disruptive_txt: 'Disruptive', discontinuous_txt: 'Discontinuous', moat_ip: 'IP', moat_switching: 'Switching costs',
+            moat_network: 'Network effects', moat_data: 'Proprietary data', life_before: 'Before', life_after: 'After',
+            gain_narrative: 'Gain', pain_narrative: 'Pain', gain_range: 'gain score', pain_range: 'pain score',
+        };
 
         function coachKey(mode, path) { return mode === 'ceo-review' ? 'ceo-review' : `office-hours:${path}`; }
-        function saveCoach() { store.setJson('coach', coach); }
+        function fieldLabel(id) { return FIELD_LABELS[id] || id; }
+
+        // conv: { key, mode, path, sessionId, log, undo: {field: value before the coach}, filled: {field: value the coach wrote}, paused }
+        let coachConvs = store.getJson('coach_convs', {});
+        let coachActive = store.get('coach_active');
+        const coachRt = {};
+
+        // One-time import of the single-conversation format (still written by demo restore pages).
+        (function importLegacyCoach() {
+            const legacy = store.getJson('coach', null);
+            if (!legacy || !legacy.mode) return;
+            const key = coachKey(legacy.mode, legacy.path);
+            const filled = {};
+            for (const e of legacy.log || []) if (e.role === 'fill') for (const [k, v] of Object.entries(e.fields)) filled[k] = String(v);
+            const undo = {};
+            if (legacy.undo) for (const k of Object.keys(filled)) if (k in legacy.undo) undo[k] = String(legacy.undo[k]);
+            coachConvs[key] = { key, mode: legacy.mode, path: legacy.path || null, sessionId: legacy.sessionId || null, log: legacy.log || [], undo, filled };
+            coachActive = key;
+            store.remove('coach');
+            store.setJson('coach_convs', coachConvs);
+            store.set('coach_active', key);
+        })();
+        // A stored session whose stream ended with the page (reload) is resumable, not running.
+        for (const conv of Object.values(coachConvs)) if (conv.sessionId) conv.paused = true;
+
+        function saveConvs() { store.setJson('coach_convs', coachConvs); }
+        function rt(key) { return coachRt[key] ??= { busy: false, abort: null, bubble: null, waiting: false, unread: false, status: '', el: null }; }
+        function coachPanelOpen() { return document.getElementById('coach-panel').classList.contains('open'); }
+        function onScreen(key) { return coachPanelOpen() && coachActive === key; }
+
+        // Each conversation renders once into its own thread element and keeps streaming into it
+        // while hidden, so switching tabs never drops a reply or a waiting question card.
+        function threadEl(key) {
+            const r = rt(key);
+            if (r.el) return r.el;
+            r.el = document.createElement('div');
+            r.el.className = 'coach-thread space-y-4';
+            r.el.dataset.key = key;
+            document.getElementById('coach-log').appendChild(r.el);
+            for (const entry of coachConvs[key].log) appendCoachEntry(key, entry);
+            if (coachConvs[key].paused) appendCoachNote(key, 'Session paused when the page reloaded. Send a message to pick up where you left off.');
+            return r.el;
+        }
 
         function openCoach(mode, path = null) {
             const key = coachKey(mode, path);
-            if (!coach || coachKey(coach.mode, coach.path) !== key) {
-                if (coachBusy) { showToast('The coach is still working. Close it or wait for it to finish first.'); }
-                else { coach = { mode, path: mode === 'office-hours' ? path : null, sessionId: null, log: [] }; coachUndo = null; saveCoach(); }
+            if (!coachConvs[key]) {
+                coachConvs[key] = { key, mode, path: mode === 'office-hours' ? path : null, sessionId: null, log: [], undo: {}, filled: {} };
+                saveConvs();
             }
-            // Re-render only for a different conversation: a rebuild would drop a reply that is
-            // still streaming and any question card waiting for an answer.
-            const renderKey = coachKey(coach.mode, coach.path) + ':' + (coach.sessionId || 'new') + ':' + coach.log.length;
-            if (!coachRendered || coachRendered.key !== coachKey(coach.mode, coach.path) || (!coachBusy && coachRendered.full !== renderKey)) renderCoach();
-            coachRendered = { key: coachKey(coach.mode, coach.path), full: renderKey };
+            showCoach(key);
+            // Guided and CEO review start straight away; brain dump waits for the paste.
+            const conv = coachConvs[key];
+            if (!conv.sessionId && !rt(key).busy && !conv.log.length && (mode === 'ceo-review' || path === 'guided')) runCoachTurn(key, '');
+        }
+
+        function showCoach(key) {
+            if (!coachConvs[key]) return;
+            coachActive = key;
+            store.set('coach_active', key);
+            threadEl(key);
+            document.querySelectorAll('#coach-log .coach-thread').forEach(el => el.classList.toggle('hidden', el.dataset.key !== key));
             const panel = document.getElementById('coach-panel');
             panel.classList.add('open');
             panel.setAttribute('aria-hidden', 'false');
-            setCoachUnread(false);
-            updateCoachTab();
-            // Guided and CEO review start straight away; brain dump waits for the paste.
-            const autoStart = !coach.sessionId && !coachBusy && !coach.log.length && (coach.mode === 'ceo-review' || coach.path === 'guided');
-            if (autoStart) runCoachTurn('');
+            document.body.classList.add('coach-open');
+            rt(key).unread = false;
+            updateCoachChrome();
+            updateCoachTabs();
+            scrollCoach(key);
+        }
+
+        function reopenCoach() {
+            const key = coachConvs[coachActive] ? coachActive : Object.keys(COACH_KINDS).find(k => coachConvs[k]);
+            if (key) showCoach(key);
         }
 
         function closeCoach() {
             const panel = document.getElementById('coach-panel');
             panel.classList.remove('open');
             panel.setAttribute('aria-hidden', 'true');
-            updateCoachTab();
+            document.body.classList.remove('coach-open');
+            updateCoachTabs();
         }
 
-        function coachPanelOpen() { return document.getElementById('coach-panel').classList.contains('open'); }
-
-        // The right-edge Chat tab shows once a coach conversation is opened, whenever the panel is hidden.
-        function updateCoachTab() {
-            const show = !!coach && !coachPanelOpen();
-            document.getElementById('coach-tab').classList.toggle('hidden', !show);
-        }
-
-        function reopenCoach() { if (coach) openCoach(coach.mode, coach.path); }
-
-        function setCoachUnread(on) {
-            coachUnread = on;
-            document.getElementById('coach-tab-dot').classList.toggle('hidden', !on);
-            document.getElementById('coach-tab-sr').textContent = on ? 'New message from the coach' : '';
-        }
-
-        // Called when the coach says or asks something; flags it on the tab if the panel is hidden.
-        function notifyCoach() { if (!coachPanelOpen()) setCoachUnread(true); }
-
+        // Start the visible conversation over. Other conversations are untouched.
         function resetCoach() {
-            if (coachBusy && !confirm('Stop the coach and start over?')) return;
-            coachAbort?.abort();
-            const { mode, path } = coach || { mode: 'office-hours', path: 'guided' };
-            coach = null;
-            coachRendered = null;
-            store.remove('coach');
-            setCoachUnread(false);
+            const key = coachActive;
+            if (!coachConvs[key]) return;
+            const r = rt(key);
+            if (r.busy && !confirm('Stop this coach conversation and start over?')) return;
+            r.abort?.abort();
+            r.el?.remove();
+            delete coachRt[key];
+            delete coachConvs[key];
+            saveConvs();
+            const { mode, path } = COACH_KINDS[key];
             openCoach(mode, path);
         }
 
-        function renderCoach() {
-            const [title, subtitle] = COACH_TITLES[coachKey(coach.mode, coach.path)];
-            document.getElementById('coach-title').textContent = title;
-            document.getElementById('coach-subtitle').textContent = subtitle;
-            const log = document.getElementById('coach-log');
-            log.replaceChildren();
-            coachBubble = null;
-            for (const entry of coach.log) appendCoachEntry(entry);
-            if (coach.sessionId && !coachBusy && coach.paused) {
-                appendCoachNote('Session paused when the page reloaded. Send a message to pick up where you left off.');
+        // One tab per conversation on the right edge; beside the panel while it is open.
+        function updateCoachTabs() {
+            const bar = document.getElementById('coach-tabs');
+            bar.replaceChildren();
+            for (const [key, kind] of Object.entries(COACH_KINDS)) {
+                if (!coachConvs[key]) continue;
+                const r = rt(key);
+                const active = onScreen(key);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `relative ${active ? 'bg-emerald-700' : 'bg-slate-900 hover:bg-black'} text-white rounded-l-xl shadow-xl px-2 py-3 flex flex-col items-center gap-1.5${r.busy ? ' loading-shimmer' : ''}`;
+                btn.setAttribute('aria-label', `${kind.title}${r.unread ? ', new message' : ''}${r.busy ? ', working' : ''}`);
+                btn.onclick = () => (active ? closeCoach() : showCoach(key));
+                const icon = document.createElement('i');
+                icon.className = `fas ${key === 'ceo-review' ? 'fa-chess-king' : key.endsWith('braindump') ? 'fa-paste' : 'fa-comments'} text-xs`;
+                const label = document.createElement('span');
+                label.className = 'text-[11px] font-bold tracking-wider';
+                label.style.writingMode = 'vertical-rl';
+                label.textContent = kind.tab;
+                btn.append(icon, label);
+                if (r.unread) {
+                    const dot = document.createElement('span');
+                    dot.className = 'coach-dot absolute -top-1.5 -left-1.5 h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white';
+                    btn.append(dot);
+                }
+                bar.append(btn);
             }
-            updateCoachControls();
         }
 
-        function updateCoachControls() {
-            const dumpFirst = coach.path === 'braindump' && !coach.sessionId && !coachBusy && !coach.log.length;
+        // Called when a conversation says or asks something; flags its tab unless it is on screen.
+        function notifyCoach(key) {
+            if (onScreen(key)) return;
+            rt(key).unread = true;
+            updateCoachTabs();
+        }
+
+        // Title, inputs and status for the conversation on screen.
+        function updateCoachChrome() {
+            const conv = coachConvs[coachActive];
+            if (!conv) return;
+            const r = rt(coachActive);
+            const kind = COACH_KINDS[coachActive];
+            document.getElementById('coach-title').textContent = kind.title;
+            document.getElementById('coach-subtitle').textContent = kind.subtitle;
+            const dumpFirst = conv.path === 'braindump' && !conv.sessionId && !r.busy && !conv.log.length;
             document.getElementById('coach-dump').classList.toggle('hidden', !dumpFirst);
             document.getElementById('coach-composer').classList.toggle('hidden', dumpFirst);
-            document.getElementById('coach-send').disabled = coachBusy;
-            document.getElementById('coach-input').disabled = coachBusy;
-            document.getElementById('coach-dump-send').disabled = coachBusy;
-            document.getElementById('coach-undo').classList.toggle('hidden', !coachUndo);
+            document.getElementById('coach-send').disabled = r.busy;
+            document.getElementById('coach-input').disabled = r.busy;
+            document.getElementById('coach-dump-send').disabled = r.busy;
+            document.getElementById('coach-undo').classList.toggle('hidden', !Object.keys(conv.undo || {}).length);
+            const status = document.getElementById('coach-status');
+            status.textContent = r.status;
+            status.classList.toggle('hidden', !r.status);
         }
 
-        function setCoachStatus(text) {
-            const el = document.getElementById('coach-status');
-            el.textContent = text || '';
-            el.classList.toggle('hidden', !text);
+        function setCoachStatus(key, text) {
+            rt(key).status = text || '';
+            if (key === coachActive) updateCoachChrome();
         }
 
-        function scrollCoach() {
+        function scrollCoach(key) {
+            if (key !== coachActive) return;
             const log = document.getElementById('coach-log');
             log.scrollTop = log.scrollHeight;
         }
@@ -1565,8 +1639,7 @@
             }).join('');
         }
 
-        function appendCoachEntry(entry) {
-            const log = document.getElementById('coach-log');
+        function appendCoachEntry(key, entry) {
             const div = document.createElement('div');
             if (entry.role === 'user') {
                 div.className = 'ml-8 bg-slate-900 text-white rounded-xl px-4 py-3 whitespace-pre-wrap break-words';
@@ -1576,8 +1649,9 @@
                 div.innerHTML = coachMarkdown(entry.text);
             } else if (entry.role === 'fill') {
                 div.className = 'text-[12px] bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-2';
+                const n = Object.keys(entry.fields).length;
                 const names = [...new Set(Object.keys(entry.fields).map(fieldLabel))].join(', ');
-                div.textContent = `Filled ${Object.keys(entry.fields).length} field${Object.keys(entry.fields).length === 1 ? '' : 's'}: ${names}${entry.note ? ` — ${entry.note}` : ''}`;
+                div.textContent = `Filled ${n} field${n === 1 ? '' : 's'}: ${names}${entry.note ? ` — ${entry.note}` : ''}`;
             } else if (entry.role === 'answer') {
                 div.className = 'ml-8 text-[12px] bg-slate-100 text-slate-700 rounded-lg px-3 py-2 whitespace-pre-wrap';
                 div.textContent = `Your answer: ${entry.text}`;
@@ -1585,68 +1659,62 @@
                 div.className = 'text-[12px] bg-red-50 border border-red-200 text-red-800 rounded-lg px-3 py-2';
                 div.textContent = entry.text;
             }
-            log.appendChild(div);
-            scrollCoach();
+            threadEl(key).appendChild(div);
+            scrollCoach(key);
             return div;
         }
 
-        function appendCoachNote(text) {
+        function appendCoachNote(key, text) {
             const div = document.createElement('div');
             div.className = 'text-[11px] text-slate-400 text-center';
             div.textContent = text;
-            document.getElementById('coach-log').appendChild(div);
-            scrollCoach();
+            threadEl(key).appendChild(div);
+            scrollCoach(key);
         }
 
-        // Same labels as lib/fields.js SECTIONS.
-        const FIELD_LABELS = {
-            mvs_narrative: 'MVS', unworkable_txt: 'Unworkable', unavoidable_txt: 'Unavoidable', urgent_txt: 'Urgent', underserved_txt: 'Underserved',
-            maslow_narrative: 'Human need', graph_text: 'Needs map narrative', graph_x: 'needs map', graph_y: 'needs map',
-            disruptive_txt: 'Disruptive', discontinuous_txt: 'Discontinuous', moat_ip: 'IP', moat_switching: 'Switching costs',
-            moat_network: 'Network effects', moat_data: 'Proprietary data', life_before: 'Before', life_after: 'After',
-            gain_narrative: 'Gain', pain_narrative: 'Pain', gain_range: 'gain score', pain_range: 'pain score',
-        };
-        function fieldLabel(id) { return FIELD_LABELS[id] || id; }
-
-        function pushCoach(entry) {
-            coach.log.push(entry);
-            saveCoach();
-            return appendCoachEntry(entry);
+        function pushCoach(key, conv, entry) {
+            conv.log.push(entry);
+            saveConvs();
+            return appendCoachEntry(key, entry);
         }
 
         function sendBrainDump() {
             const text = document.getElementById('coach-dump-text').value.trim();
             if (!text) { showToast('Paste your notes first.'); return; }
             document.getElementById('coach-dump-text').value = '';
-            runCoachTurn(text);
+            runCoachTurn(coachActive, text);
         }
 
         function sendCoachMessage(event) {
             event.preventDefault();
             const input = document.getElementById('coach-input');
             const text = input.value.trim();
-            if (!text || coachBusy) return;
+            if (!text || rt(coachActive).busy) return;
             input.value = '';
-            runCoachTurn(text);
+            runCoachTurn(coachActive, text);
         }
 
-        // One POST /api/coach turn, reading server-sent events until `done`.
-        async function runCoachTurn(message) {
-            if (message) pushCoach({ role: 'user', text: message });
-            coach.paused = false;
-            coachBusy = true;
-            updateCoachControls();
-            setCoachStatus('Connecting to the coach…');
-            coachAbort = new AbortController();
-            const body = { mode: coach.mode, message, workbook: collectData() };
-            if (coach.path) body.path = coach.path;
-            if (coach.sessionId) body.sessionId = coach.sessionId;
+        // One POST /api/coach turn for one conversation, reading server-sent events until `done`.
+        // conv and r are captured, so a reset mid-run only touches the discarded objects.
+        async function runCoachTurn(key, message) {
+            const conv = coachConvs[key];
+            const r = rt(key);
+            if (!conv || r.busy) return;
+            if (message) pushCoach(key, conv, { role: 'user', text: message });
+            conv.paused = false;
+            r.busy = true;
+            r.abort = new AbortController();
+            setCoachStatus(key, 'Connecting to the coach…');
+            updateCoachTabs();
+            const body = { mode: conv.mode, message, workbook: collectData() };
+            if (conv.path) body.path = conv.path;
+            if (conv.sessionId) body.sessionId = conv.sessionId;
             try {
                 const res = await fetch('/api/coach', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
-                    signal: coachAbort.signal,
+                    signal: r.abort.signal,
                 });
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
@@ -1663,78 +1731,90 @@
                         const block = buffer.slice(0, i);
                         buffer = buffer.slice(i + 2);
                         const data = block.split('\n').find(l => l.startsWith('data: '));
-                        if (data) handleCoachEvent(JSON.parse(data.slice(6)));
+                        if (data) handleCoachEvent(key, conv, r, JSON.parse(data.slice(6)));
                     }
                 }
             } catch (e) {
-                if (e.name !== 'AbortError') pushCoach({ role: 'error', text: e.message || 'Lost the connection to the coach.' });
+                if (e.name !== 'AbortError') { pushCoach(key, conv, { role: 'error', text: e.message || 'Lost the connection to the coach.' }); notifyCoach(key); }
             } finally {
-                finishCoachBubble();
-                document.querySelectorAll('#coach-log .coach-question:not(.answered)').forEach(card => card.remove());
-                coachBusy = false;
-                coachWaiting = false;
-                coachAbort = null;
-                setCoachStatus('');
-                updateCoachControls();
-                saveCoach();
-                updateCoachTab();
+                finishCoachBubble(conv, r);
+                r.el?.querySelectorAll('.coach-question:not(.answered)').forEach(card => card.remove());
+                r.busy = false;
+                r.waiting = false;
+                r.abort = null;
+                if (coachRt[key] === r) setCoachStatus(key, '');
+                saveConvs();
+                updateCoachChrome();
+                updateCoachTabs();
             }
         }
 
-        function finishCoachBubble() {
-            if (coachBubble?.text.trim()) { coach.log.push({ role: 'assistant', text: coachBubble.text }); saveCoach(); }
-            coachBubble = null;
+        function finishCoachBubble(conv, r) {
+            if (r.bubble?.text.trim()) { conv.log.push({ role: 'assistant', text: r.bubble.text }); saveConvs(); }
+            r.bubble = null;
         }
 
-        function handleCoachEvent(ev) {
+        function handleCoachEvent(key, conv, r, ev) {
+            if (coachRt[key] !== r) return; // conversation was reset
             switch (ev.type) {
                 case 'session':
-                    coach.sessionId = ev.sessionId;
-                    saveCoach();
-                    setCoachStatus('Thinking…');
+                    conv.sessionId = ev.sessionId;
+                    saveConvs();
+                    setCoachStatus(key, 'Thinking…');
                     break;
                 case 'text':
-                    if (!coachBubble) { coachBubble = { el: appendCoachEntry({ role: 'assistant', text: '' }), text: '' }; notifyCoach(); }
-                    coachBubble.text += ev.delta;
-                    coachBubble.el.innerHTML = coachMarkdown(coachBubble.text);
-                    setCoachStatus('');
-                    scrollCoach();
+                    if (!r.bubble) { r.bubble = { el: appendCoachEntry(key, { role: 'assistant', text: '' }), text: '' }; notifyCoach(key); }
+                    r.bubble.text += ev.delta;
+                    r.bubble.el.innerHTML = coachMarkdown(r.bubble.text);
+                    if (!r.waiting) setCoachStatus(key, '');
+                    scrollCoach(key);
                     break;
                 case 'text_end':
-                    finishCoachBubble();
-                    if (!coachWaiting) setCoachStatus('Thinking…');
+                    finishCoachBubble(conv, r);
+                    if (!r.waiting) setCoachStatus(key, 'Thinking…');
                     break;
                 case 'tool':
-                    if (!coachWaiting) setCoachStatus(TOOL_STATUS[ev.name] || 'Working…');
+                    if (!r.waiting) setCoachStatus(key, TOOL_STATUS[ev.name] || 'Working…');
                     break;
                 case 'fill':
-                    applyCoachFill(ev.fields);
-                    pushCoach({ role: 'fill', fields: ev.fields, note: ev.note });
-                    notifyCoach();
+                    applyCoachFill(conv, ev.fields);
+                    pushCoach(key, conv, { role: 'fill', fields: ev.fields, note: ev.note });
+                    notifyCoach(key);
+                    if (key === coachActive) updateCoachChrome();
                     break;
                 case 'question':
-                    finishCoachBubble();
-                    coachWaiting = true;
-                    setCoachStatus('Waiting for your answer…');
-                    renderCoachQuestion(ev);
-                    notifyCoach();
+                    finishCoachBubble(conv, r);
+                    r.waiting = true;
+                    setCoachStatus(key, 'Waiting for your answer…');
+                    renderCoachQuestion(key, conv, r, ev);
+                    notifyCoach(key);
                     break;
                 case 'error':
-                    pushCoach({ role: 'error', text: ev.message });
-                    notifyCoach();
+                    pushCoach(key, conv, { role: 'error', text: ev.message });
+                    notifyCoach(key);
                     break;
                 case 'done':
-                    if (ev.sessionId) coach.sessionId = ev.sessionId;
-                    saveCoach();
+                    if (ev.sessionId) conv.sessionId = ev.sessionId;
+                    saveConvs();
                     break;
             }
         }
 
-        // Writes coach values into the workbook inputs, keeping the pre-coach values for one-click undo.
-        function applyCoachFill(values) {
-            if (!coachUndo) { coachUndo = collectData(); coach.undo = coachUndo; saveCoach(); }
+        function currentValue(id) {
+            if (id === 'graph_x') return String(graph.x);
+            if (id === 'graph_y') return String(graph.y);
+            return document.getElementById(id)?.value ?? '';
+        }
+
+        // Writes coach values into the workbook, remembering each field's value from before this
+        // conversation first touched it, and what the coach wrote, for undo.
+        function applyCoachFill(conv, values) {
+            conv.undo ??= {};
+            conv.filled ??= {};
             let graphMoved = false;
             for (const [id, value] of Object.entries(values)) {
+                if (!(id in conv.undo)) conv.undo[id] = currentValue(id);
+                conv.filled[id] = String(value);
                 if (id === 'graph_x' || id === 'graph_y') { graph[id === 'graph_x' ? 'x' : 'y'] = Number(value); graphMoved = true; continue; }
                 const el = document.getElementById(id);
                 if (!el) continue;
@@ -1746,23 +1826,32 @@
             if (graphMoved) setMarker(graph.x, graph.y);
             calculateRatio();
             save();
-            updateCoachControls();
+            saveConvs();
         }
 
+        // Reverts only the fields this conversation filled and that still hold what the coach
+        // wrote; anything edited since (by you or another conversation) is kept.
         function undoCoachFill() {
-            if (!coachUndo) return;
-            applyData(coachUndo);
+            const conv = coachConvs[coachActive];
+            if (!conv || !Object.keys(conv.undo || {}).length) return;
+            const data = collectData();
+            let restored = 0, kept = 0;
+            for (const [id, before] of Object.entries(conv.undo)) {
+                if (currentValue(id) === conv.filled[id]) { data[id] = before; restored++; }
+                else kept++;
+            }
+            applyData(data);
             setDirty(true);
-            coachUndo = null;
-            delete coach.undo;
-            saveCoach();
-            updateCoachControls();
-            appendCoachNote('Restored the workbook to how it was before the coach filled it.');
+            conv.undo = {};
+            conv.filled = {};
+            saveConvs();
+            updateCoachChrome();
+            appendCoachNote(coachActive, `Restored ${restored} field${restored === 1 ? '' : 's'} to how ${restored === 1 ? 'it was' : 'they were'} before the coach.${kept ? ` Kept ${kept} you changed since.` : ''}`);
             showToast('AI fill undone.');
         }
 
         // Renders an AskUserQuestion request (1-4 questions) as a card and posts the answers back.
-        function renderCoachQuestion({ id, questions }) {
+        function renderCoachQuestion(key, conv, r, { id, questions }) {
             const card = document.createElement('div');
             card.className = 'coach-question border border-emerald-300 bg-emerald-50/40 rounded-xl p-4 space-y-4';
             const picks = questions.map(() => new Set());
@@ -1854,9 +1943,9 @@
                     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not send the answer.');
                     card.classList.add('answered');
                     card.remove();
-                    pushCoach({ role: 'answer', text: Object.values(answers).join(' · ') });
-                    coachWaiting = false;
-                    setCoachStatus('Thinking…');
+                    pushCoach(key, conv, { role: 'answer', text: Object.values(answers).join(' · ') });
+                    r.waiting = false;
+                    setCoachStatus(key, 'Thinking…');
                 } catch (e) {
                     submit.disabled = false;
                     submit.textContent = 'Send answer';
@@ -1864,13 +1953,11 @@
                 }
             };
 
-            document.getElementById('coach-log').appendChild(card);
-            scrollCoach();
+            threadEl(key).appendChild(card);
+            scrollCoach(key);
         }
 
-        // A stored session whose stream ended with the page (reload) is resumable, not running.
-        if (coach?.sessionId) { coach.paused = true; saveCoach(); }
-        document.addEventListener('DOMContentLoaded', updateCoachTab);
+        document.addEventListener('DOMContentLoaded', updateCoachTabs);
     </script>
 </body>
 </html>
