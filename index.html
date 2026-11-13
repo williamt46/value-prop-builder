@@ -41,6 +41,12 @@
             font-weight: normal;
         }
 
+        /* Phones: hidden tooltips must not widen the page (they made it scroll sideways at 375px). */
+        @media (max-width: 639px) {
+            .tooltip .tooltiptext { display: none; }
+            .tooltip:hover .tooltiptext { display: block; }
+        }
+
         .tooltip:hover .tooltiptext {
             visibility: visible;
             opacity: 1;
@@ -106,6 +112,10 @@
         .ai-off .ai-feature { display: none !important; }
         /* The coach runs only on the local dev server (/api/auth/me reports coach: true) */
         .coach-off .coach-feature { display: none !important; }
+        /* Event mode (/api/auth/me reports event: true): attendees get brain dump and the cards only */
+        .event-only { display: none; }
+        .event-mode .event-only { display: block; }
+        .event-mode .event-hide { display: none !important; }
         .coach-filled { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45); transition: box-shadow 0.4s; }
         #coach-panel { transform: translateX(100%); transition: transform 0.25s ease; }
         #coach-tabs { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 195; display: flex; flex-direction: column; gap: 8px; transition: right 0.25s ease; }
@@ -221,14 +231,17 @@
                 <!-- Coach: gstack office hours + CEO review via the local Claude login -->
                 <div class="coach-feature space-y-2">
                     <div class="h-px bg-slate-200"></div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Coach <span class="normal-case font-normal">(local, your Claude plan)</span></p>
-                    <button onclick="openCoach('office-hours', 'guided')" class="w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Coach <span class="event-hide normal-case font-normal">(local, your Claude plan)</span></p>
+                    <button onclick="makeMyCards()" class="event-only w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 text-sm font-bold shadow-sm">
+                        <i class="fas fa-images mr-2"></i>Make my cards
+                    </button>
+                    <button onclick="openCoach('office-hours', 'guided')" class="event-hide w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm">
                         <i class="fas fa-comments mr-2 text-emerald-600"></i>Office hours: guided
                     </button>
                     <button onclick="openCoach('office-hours', 'braindump')" class="w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm">
                         <i class="fas fa-paste mr-2 text-emerald-600"></i>Office hours: brain dump
                     </button>
-                    <button onclick="openCoach('ceo-review')" class="w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm">
+                    <button onclick="openCoach('ceo-review')" class="event-hide w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm">
                         <i class="fas fa-chess-king mr-2 text-indigo-600"></i>CEO review
                     </button>
                 </div>
@@ -781,6 +794,7 @@
         <div id="coach-status" class="hidden px-5 py-2 text-[11px] text-slate-500 border-t border-slate-100 loading-shimmer"></div>
         <!-- Brain dump: first message -->
         <div id="coach-dump" class="hidden p-4 border-t border-slate-100 space-y-2">
+            <p class="event-only text-[11px] text-slate-500 leading-snug bg-slate-50 border border-slate-200 rounded-lg p-2.5">CrashTest MVP's coach runs on the organiser's laptop and Anthropic's API, so your notes and workbook pass through both. Your coach conversation is kept on the organiser's laptop for this event, and when you press Make my cards or Save, your workbook is saved there too and the organiser can read it. Please don't paste anything confidential.</p>
             <textarea id="coach-dump-text" class="w-full p-3 border border-slate-200 rounded-lg text-sm min-h-[220px] focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Paste anything: notes, a pitch draft, customer quotes, an email to a cofounder. The coach maps it into the workbook and tells you what's still weak."></textarea>
             <button id="coach-dump-send" onclick="sendBrainDump()" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg hover:bg-emerald-700 text-sm font-bold disabled:opacity-60">Fill my workbook</button>
         </div>
@@ -1075,6 +1089,16 @@
         }
 
         // Saves to the database. Opens the details form first when it needs a title or name.
+        // Event mode: save this workbook for the organiser, then show the share cards.
+        async function makeMyCards() {
+            const cardIds = ['card_who', 'card_pain', 'card_need', 'card_before', 'card_after', 'card_pitch'];
+            if (cardIds.every(id => !document.getElementById(id)?.value.trim())) draftCardsFromWorkbook();
+            const title = current?.title || (profile.name ? `${profile.name}'s idea` : 'Event workbook');
+            await persistToCloud(title);
+            if (coachPanelOpen()) closeCoach();
+            document.getElementById('cards')?.scrollIntoView({ behavior: 'smooth' });
+        }
+
         async function saveToCloud() {
             if (isOwner() && profile.name) return persistToCloud(current.title);
             return openDetailsModal();
@@ -1257,7 +1281,10 @@
             // Show AI features only where a sign-in method exists (hosted client ID or local mode).
             document.body.classList.toggle('ai-off', !account.configured && !account.signedIn);
             document.body.classList.toggle('coach-off', !account.coach);
+            document.body.classList.toggle('event-mode', !!account.event);
             updateAccountUI();
+            // Attendees land straight in brain dump the first time (their own conversation is kept).
+            if (account.event && !coachConvs['office-hours:braindump']) openCoach('office-hours', 'braindump');
 
             if (authResult.error) alertCustom(AUTH_ERRORS[authResult.error] || AUTH_ERRORS.failed);
             else if (authResult.signedIn && account.planUsage && store.get('plan_welcome') !== '1') {

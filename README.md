@@ -25,9 +25,27 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:3000 (`localhost` redirects there). Workbooks are stored in `data/workbooks.db`, a local SQLite file that git ignores. The server listens on `127.0.0.1` only; set `HOST=0.0.0.0` to expose it on your network, which turns local ChatGPT sign-in off.
+Open http://127.0.0.1:3000 (`localhost` redirects there). Workbooks are stored in `data/workbooks.db`, a local SQLite file that git ignores. The server listens on `127.0.0.1` only; set `HOST=0.0.0.0` to expose it on your network. Owner features (local ChatGPT sign-in, the coach on your Claude login, the owner page) only answer requests from this laptop itself: a loopback connection with no proxy headers and a `127.0.0.1` Host. Other devices on the network never get them.
 
 **AI features when running locally:** click **Continue with ChatGPT** in the sidebar and sign in. Eligible ChatGPT Plus and Pro accounts then run mentor feedback and pitches on their own plan, with no API key or OpenAI approval needed. This uses OpenAI's [ChatGPT plan usage for open-source apps](https://developers.openai.com/siwc/token-sharing-open-source), which registers this install with your ChatGPT account on first sign-in. Review or limit its usage in [ChatGPT settings → Usage](https://chatgpt.com/settings/usage). Set `OPENAI_LOCAL_SIGNIN=false` to turn it off.
+
+**Event mode (one link for a room of attendees)**
+
+Attendees open one link and get their own brain-dump coach session on an Anthropic API key, then make their share cards. It runs only on the local dev server.
+
+1. In the [Anthropic Console](https://console.anthropic.com), set a spend limit on the API key you use for the event. That limit is the only hard cap on spend.
+2. Start the server with both variables set (without both, nothing changes):
+   ```bash
+   EVENT_CODE=pick-a-code ANTHROPIC_API_KEY=sk-ant-... npm run dev
+   ```
+   `COACH_MODEL` overrides the attendee model (default `claude-sonnet-5-5`).
+3. Keep the laptop awake with `caffeinate -dis` in another terminal, then open a tunnel with no host-header flag:
+   ```bash
+   cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000
+   ```
+4. Share `https://<tunnel>.trycloudflare.com/?e=<EVENT_CODE>`. The code is exchanged once for a signed cookie and removed from the URL.
+
+Attendees get office-hours brain dump only (no guided session, CEO review or ChatGPT sign-in), up to 10 coach turns at once and one per attendee, 25 model calls per turn, and question cards that pause after 5 minutes (sending a message resumes). Their coach transcripts go to `data/event-claude/`; session bindings and spend go to `data/event-state.json`, and the server logs each turn's cost. Pressing **Make my cards** or **Save** stores the workbook; you see them at http://127.0.0.1:3000/owner on this laptop. Run `npm test` for the event-mode unit tests.
 
 **Deploy to Vercel**
 

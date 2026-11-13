@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event workbooks</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f8fafc; --fg: #0f172a; --muted: #64748b; --line: #e2e8f0; --link: #047857; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0f172a; --fg: #e2e8f0; --muted: #94a3b8; --line: #1e293b; --link: #34d399; } }
+    body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p { color: var(--muted); margin: 0 0 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    a { color: var(--link); font-weight: 600; text-decoration: none; }
+    .muted { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Event workbooks</h1>
+    <p>Saved by attendees with "Make my cards" or Save. Only visible on this laptop. Open one at a time.</p>
+    <table>
+      <thead><tr><th>Workbook</th><th>Attendee</th><th>Updated</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </main>
+  <script>
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    fetch('/api/owner/workbooks').then((r) => r.json()).then(({ workbooks = [] }) => {
+      const rows = document.getElementById('rows');
+      if (!workbooks.length) { rows.innerHTML = '<tr><td colspan="3" class="muted">No event workbooks saved yet.</td></tr>'; return; }
+      rows.innerHTML = workbooks.map((w) => `<tr>
+        <td><a href="/?w=${encodeURIComponent(w.id)}" target="_blank" rel="noopener">${esc(w.title || 'Untitled')}</a></td>
+        <td>${esc(w.name || '—')}<div class="muted">${esc(w.attendee)}</div></td>
+        <td class="muted">${esc(new Date(w.updatedAt).toLocaleString())}</td>
+      </tr>`).join('');
+    }).catch(() => { document.getElementById('rows').innerHTML = '<tr><td colspan="3" class="muted">Could not load.</td></tr>'; });
+  </script>
+</body>
+</html>
