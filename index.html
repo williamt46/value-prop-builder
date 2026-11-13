@@ -1092,7 +1092,8 @@
         // Event mode: save this workbook for the organiser, then show the share cards.
         async function makeMyCards() {
             const cardIds = ['card_who', 'card_pain', 'card_need', 'card_before', 'card_after', 'card_pitch'];
-            if (cardIds.every(id => !document.getElementById(id)?.value.trim())) draftCardsFromWorkbook();
+            // One brain-dump turn often leaves some card fields empty; draft only those from the workbook.
+            if (cardIds.some(id => !document.getElementById(id)?.value.trim())) draftCardsFromWorkbook();
             const title = current?.title || (profile.name ? `${profile.name}'s idea` : 'Event workbook');
             await persistToCloud(title);
             if (coachPanelOpen()) closeCoach();
