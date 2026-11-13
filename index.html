@@ -158,6 +158,9 @@
                 <a href="#evaluation" class="nav-link flex items-center px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-scale-balanced w-5"></i> <span class="ml-3">Evaluation</span>
                 </a>
+                <a href="#cards" class="nav-link flex items-center px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-images w-5"></i> <span class="ml-3">Share cards</span>
+                </a>
             </nav>
 
             <!-- Workbook Storage, Sharing & Export -->
@@ -617,6 +620,66 @@
                 </div>
             </section>
 
+            <!-- Section: Share cards (drawn on canvas; works with no AI) -->
+            <section id="cards" class="no-print mb-16 scroll-mt-8">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-2xl font-semibold flex items-center">
+                        <span class="bg-violet-100 text-violet-600 p-2 rounded-lg mr-4"><i class="fas fa-images"></i></span>
+                        Share cards
+                    </h3>
+                </div>
+                <p class="text-slate-500 text-sm mb-6 max-w-2xl">Five cards for LinkedIn and Threads. Edit the wording under each card; the preview updates as you type. Card 3 follows your needs map.</p>
+
+                <div class="flex flex-col sm:flex-row flex-wrap gap-3 mb-8">
+                    <button type="button" onclick="draftCardsFromWorkbook()" class="bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg hover:bg-slate-50 text-sm font-bold shadow-sm flex items-center justify-center">
+                        <i class="fas fa-wand-magic-sparkles mr-2 text-violet-500"></i> Draft from my workbook
+                    </button>
+                    <button type="button" id="cards-linkedin-btn" onclick="exportCards('linkedin')" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
+                        <i class="fab fa-linkedin mr-2"></i> LinkedIn (5 cards)
+                    </button>
+                    <button type="button" id="cards-threads-btn" onclick="exportCards('threads')" class="bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-black text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
+                        <i class="fas fa-at mr-2"></i> Threads (2 images)
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div class="glass-card p-4 rounded-xl shadow-sm">
+                        <canvas id="card_canvas_1" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
+                        <label for="card_who" class="block text-xs font-bold text-slate-500 uppercase mt-3">1 · Who it's for</label>
+                        <textarea id="card_who" rows="2" oninput="save()" class="w-full p-3 border border-slate-200 rounded-lg text-sm mt-1" placeholder="Practice managers at 5 to 20 provider clinics"></textarea>
+                        <p id="card_warn_1" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm">
+                        <canvas id="card_canvas_2" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
+                        <label for="card_pain" class="block text-xs font-bold text-slate-500 uppercase mt-3">2 · The pain</label>
+                        <textarea id="card_pain" rows="2" oninput="save()" class="w-full p-3 border border-slate-200 rounded-lg text-sm mt-1" placeholder="They lose hours every morning re-typing paper intake forms"></textarea>
+                        <p id="card_warn_2" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm">
+                        <canvas id="card_canvas_3" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
+                        <label for="card_need" class="block text-xs font-bold text-slate-500 uppercase mt-3">3 · Critical &amp; blatant</label>
+                        <textarea id="card_need" rows="2" oninput="save()" class="w-full p-3 border border-slate-200 rounded-lg text-sm mt-1" placeholder="They need this fixed now, not someday"></textarea>
+                        <p class="text-[10px] text-slate-400 mt-1">The dot follows the needs map above.</p>
+                        <p id="card_warn_3" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm">
+                        <canvas id="card_canvas_4" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
+                        <label for="card_before" class="block text-xs font-bold text-rose-500 uppercase mt-3">4 · Before (Current Pain)</label>
+                        <textarea id="card_before" rows="3" oninput="save()" class="w-full p-3 border border-rose-100 rounded-lg text-sm mt-1 bg-rose-50/20" placeholder="Clinics lose 20 minutes per patient re-keying forms"></textarea>
+                        <label for="card_after" class="block text-xs font-bold text-emerald-500 uppercase mt-3">4 · After (Future Gain)</label>
+                        <textarea id="card_after" rows="3" oninput="save()" class="w-full p-3 border border-emerald-100 rounded-lg text-sm mt-1 bg-emerald-50/20" placeholder="Intake finishes before the patient sits down"></textarea>
+                        <p id="card_warn_4" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
+                    </div>
+                    <div class="glass-card p-4 rounded-xl shadow-sm">
+                        <canvas id="card_canvas_5" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
+                        <label for="card_pitch" class="block text-xs font-bold text-slate-500 uppercase mt-3">5 · One-line pitch</label>
+                        <textarea id="card_pitch" rows="2" oninput="save()" class="w-full p-3 border border-slate-200 rounded-lg text-sm mt-1" placeholder="We turn patient intake into a 30-second phone task"></textarea>
+                        <p class="text-[10px] text-slate-400 mt-1">Your name on the card comes from your saved details.</p>
+                        <p id="card_warn_5" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Final AI Summary -->
             <section class="ai-feature mt-20 pt-10 border-t border-slate-200">
                 <div class="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-2xl">
@@ -742,7 +805,8 @@
             'disruptive_txt', 'discontinuous_txt',
             'moat_ip', 'moat_switching', 'moat_network', 'moat_data',
             'life_before', 'life_after', 'gain_range', 'pain_range',
-            'gain_narrative', 'pain_narrative'
+            'gain_narrative', 'pain_narrative',
+            'card_who', 'card_pain', 'card_need', 'card_before', 'card_after', 'card_pitch' // Share cards
         ];
         // Fields backed by a form element (graph_x/y live in `graph`)
         const INPUT_FIELDS = fields.filter(f => f !== 'graph_x' && f !== 'graph_y');
@@ -832,6 +896,7 @@
             setMarker(parseFloat(data.graph_x ?? 50), parseFloat(data.graph_y ?? 50));
             calculateRatio();
             persistDraft();
+            if (typeof cardsChanged === 'function') cardsChanged();
         }
 
         function hasContent() {
@@ -844,6 +909,7 @@
         // Called on every edit: keep the draft on this device and flag it as unsaved.
         function save() {
             persistDraft();
+            if (typeof cardsChanged === 'function') cardsChanged();
             setDirty(true);
         }
 
@@ -858,6 +924,7 @@
             const statusEl = document.getElementById('graph_status');
             statusEl.textContent = `${graph.y < 50 ? "Critical" : "Aspirational"} & ${graph.x < 50 ? "Latent" : "Blatant"}`;
             statusEl.className = "font-bold " + (graph.y < 50 ? "text-rose-600" : "text-slate-500");
+            if (typeof cardsChanged === 'function') cardsChanged();
         }
 
         function setMarker(x, y) {
@@ -944,6 +1011,7 @@
         }
 
         function updateSaveUI() {
+            if (typeof cardsChanged === 'function') cardsChanged(); // the founder's name on card 5 follows the profile
             const owner = isOwner();
             let status = 'Saved';
             let dot = 'status-ok';
@@ -1453,6 +1521,7 @@
             disruptive_txt: 'Disruptive', discontinuous_txt: 'Discontinuous', moat_ip: 'IP', moat_switching: 'Switching costs',
             moat_network: 'Network effects', moat_data: 'Proprietary data', life_before: 'Before', life_after: 'After',
             gain_narrative: 'Gain', pain_narrative: 'Pain', gain_range: 'gain score', pain_range: 'pain score',
+            card_who: 'Card 1', card_pain: 'Card 2', card_need: 'Card 3', card_before: 'Card 4 before', card_after: 'Card 4 after', card_pitch: 'Card 5',
         };
 
         function coachKey(mode, path) { return mode === 'ceo-review' ? 'ceo-review' : `office-hours:${path}`; }
@@ -1958,6 +2027,387 @@
         }
 
         document.addEventListener('DOMContentLoaded', updateCoachTabs);
+    </script>
+    <script>
+        // ===== Share cards: five 1080x1350 canvases; each canvas is both the preview and the export =====
+        (function () {
+            const CW = 1080, CH = 1350, M = 84;
+            const FONT = 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif';
+            const INK = '#0F1B33';
+            const GSTOPS = [[0, '#4338CA'], [.3, '#14B8A6'], [.6, '#FB7185'], [.8, '#A855F7'], [1, '#F2B134']];
+            const GOLD = [[0, '#FEF3C7'], [.35, '#FCD34D'], [.7, '#F59E0B'], [1, '#B45309']];
+            const PURPLE = [[0, '#DDD6FE'], [.4, '#A78BFA'], [.75, '#7C3AED'], [1, '#4C1D95']];
+            const NAVY = [[0, '#3730A3'], [1, '#1E1B4B']];
+            const ROSE = [[0, '#FECDD3'], [.5, '#FB7185'], [1, '#E11D48']];
+            const SHIELD = [[0, '#6366F1'], [.35, '#14B8A6'], [.7, '#FB7185'], [1, '#A855F7']];
+
+            const grad = (ctx, x0, y0, x1, y1, stops = GSTOPS) => {
+                const g = ctx.createLinearGradient(x0, y0, x1, y1);
+                stops.forEach(([s, c]) => g.addColorStop(s, c));
+                return g;
+            };
+            const rr = (ctx, x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+            const tracked = (ctx, t, x, y, sp, align = 'left') => {
+                ctx.letterSpacing = sp + 'px'; ctx.textAlign = align; ctx.fillText(t, x, y);
+                ctx.letterSpacing = '0px'; ctx.textAlign = 'left';
+            };
+
+            // ---- text fitting: shrink to a minimum size, then wrap, then truncate (and report it) ----
+            function wrap(ctx, t, w) {
+                const out = []; let cur = '';
+                for (const word of t.split(' ')) {
+                    const tr = cur ? cur + ' ' + word : word;
+                    if (ctx.measureText(tr).width > w && cur) { out.push(cur); cur = word; } else cur = tr;
+                }
+                if (cur) out.push(cur);
+                return out;
+            }
+            function fit(ctx, text, w, h, { max = 72, min = 38, lh = 1.22, weight = 700 }) {
+                text = (text || '').trim().replace(/\s+/g, ' ');
+                for (let s = max; s >= min; s -= 2) {
+                    ctx.font = `${weight} ${s}px ${FONT}`;
+                    const lines = wrap(ctx, text, w);
+                    if (lines.length * s * lh <= h) return { size: s, lines, truncated: false };
+                }
+                ctx.font = `${weight} ${min}px ${FONT}`;
+                let lines = wrap(ctx, text, w);
+                const n = Math.max(1, Math.floor(h / (min * lh)));
+                if (lines.length <= n) return { size: min, lines, truncated: false };
+                lines = lines.slice(0, n);
+                let last = lines[n - 1];
+                while (last && ctx.measureText(last + '…').width > w) last = last.slice(0, -1).trimEnd();
+                lines[n - 1] = last + '…';
+                return { size: min, lines, truncated: true };
+            }
+
+            // ---- background + glass ----
+            function meshBg(ctx) {
+                const g = ctx.createLinearGradient(0, 0, CW, CH);
+                g.addColorStop(0, '#1A1140'); g.addColorStop(.35, '#122A4A'); g.addColorStop(.62, '#0E2E3C'); g.addColorStop(.82, '#2B1B3E'); g.addColorStop(1, '#3A1F2E');
+                ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+                [[180, 220, 520, '67,56,202', .55], [920, 380, 560, '20,184,166', .40], [760, 1200, 620, '251,113,133', .35], [150, 1180, 500, '168,85,247', .30]].forEach(([x, y, r, c, a]) => {
+                    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+                    rg.addColorStop(0, `rgba(${c},${a})`); rg.addColorStop(1, `rgba(${c},0)`);
+                    ctx.fillStyle = rg; ctx.fillRect(0, 0, CW, CH);
+                });
+            }
+            function glassPanel(ctx, x, y, w, h, r = 32) {
+                ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+                rr(ctx, x, y, w, h, r); ctx.fillStyle = 'rgba(8,10,22,.72)'; ctx.fill(); ctx.restore();
+                rr(ctx, x, y, w, h, r); ctx.save(); ctx.clip();
+                const hl = ctx.createLinearGradient(x, y, x, y + 60);
+                hl.addColorStop(0, 'rgba(255,255,255,.14)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = hl; ctx.fillRect(x, y, w, 60); ctx.restore();
+                rr(ctx, x + 1, y + 1, w - 2, h - 2, r - 1); ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1; ctx.stroke();
+            }
+
+            // ---- badge primitives ----
+            function starPath(ctx, cx, cy, ro, ri, n, rot = -Math.PI / 2) {
+                ctx.beginPath();
+                for (let i = 0; i < n * 2; i++) { const r = i % 2 ? ri : ro, a = rot + i * Math.PI / n; const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+                ctx.closePath();
+            }
+            function roundStar(ctx, cx, cy, ro, ri, n, rot = -Math.PI / 2) {
+                ctx.beginPath();
+                for (let i = 0; i <= n * 2; i++) {
+                    const a = rot + i * Math.PI / n, r = i % 2 ? ri : ro; const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+                    if (!i) { ctx.moveTo(x, y); continue; }
+                    const am = rot + (i - .5) * Math.PI / n, rm = (i % 2 ? ro : ri) * .5 + (i % 2 ? ri : ro) * .5;
+                    ctx.quadraticCurveTo(cx + Math.cos(am) * rm * 1.02, cy + Math.sin(am) * rm * 1.02, x, y);
+                }
+                ctx.closePath();
+            }
+            function shieldPath(ctx, cx, cy, w, h) {
+                const t = cy - h / 2, b = cy + h / 2; ctx.beginPath(); ctx.moveTo(cx, t);
+                ctx.quadraticCurveTo(cx + w * .28, t + h * .10, cx + w / 2, t + h * .06); ctx.lineTo(cx + w / 2, cy + h * .02);
+                ctx.quadraticCurveTo(cx + w / 2, b - h * .18, cx, b); ctx.quadraticCurveTo(cx - w / 2, b - h * .18, cx - w / 2, cy + h * .02);
+                ctx.lineTo(cx - w / 2, t + h * .06); ctx.quadraticCurveTo(cx - w * .28, t + h * .10, cx, t); ctx.closePath();
+            }
+            function heartPath(ctx, cx, cy, s) {
+                ctx.beginPath(); ctx.moveTo(cx, cy + s * .75);
+                ctx.bezierCurveTo(cx - s * 1.1, cy + s * .05, cx - s * .75, cy - s * .85, cx, cy - s * .3);
+                ctx.bezierCurveTo(cx + s * .75, cy - s * .85, cx + s * 1.1, cy + s * .05, cx, cy + s * .75); ctx.closePath();
+            }
+            function crownPath(ctx, cx, cy, s) {
+                ctx.beginPath(); ctx.moveTo(cx - s, cy + s * .55); ctx.lineTo(cx - s * 1.05, cy - s * .45); ctx.lineTo(cx - s * .5, cy);
+                ctx.lineTo(cx, cy - s * .7); ctx.lineTo(cx + s * .5, cy); ctx.lineTo(cx + s * 1.05, cy - s * .45); ctx.lineTo(cx + s, cy + s * .55); ctx.closePath();
+            }
+            function checkStroke(ctx, cx, cy, s) {
+                ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = s * .28; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.beginPath(); ctx.moveTo(cx - s * .55, cy + s * .02); ctx.lineTo(cx - s * .15, cy + s * .42); ctx.lineTo(cx + s * .6, cy - s * .4); ctx.stroke(); ctx.restore();
+            }
+            function gloss(ctx, cx, cy, rx, ry, a = .35) {
+                ctx.save(); const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry));
+                g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, -.5, 0, 7); ctx.fill(); ctx.restore();
+            }
+            function sparkle(ctx, x, y, s, col = '#fff') {
+                ctx.save(); ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = s * 1.5;
+                ctx.beginPath(); ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s, y); ctx.quadraticCurveTo(x, y, x, y - s); ctx.fill(); ctx.restore();
+            }
+            function wing(ctx, cx, cy, s, dir, stops) {
+                [[-.55, 1.0], [-.12, .86], [.3, .7]].forEach(([rot, len], i) => {
+                    ctx.save(); ctx.translate(cx, cy + (i - 1) * s * .12); ctx.rotate(dir * rot);
+                    const L = s * len, T = s * .24; ctx.beginPath(); ctx.moveTo(0, -T * .5);
+                    ctx.bezierCurveTo(dir * L * .45, -T * 1.1, dir * L * .95, -T * .5, dir * L, 0);
+                    ctx.bezierCurveTo(dir * L * .9, T * .55, dir * L * .4, T * .8, 0, T * .5); ctx.closePath();
+                    ctx.fillStyle = grad(ctx, 0, -T, dir * L, T, stops); ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+                });
+            }
+            function dropShadow(ctx, fn) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; fn(); ctx.restore(); }
+
+            // ---- the five badges ----
+            function badgeHeartMedallion(ctx, cx, cy, r) {
+                wing(ctx, cx - r * .42, cy - r * .06, r * .78, -1, GOLD); wing(ctx, cx + r * .42, cy - r * .06, r * .78, 1, GOLD);
+                dropShadow(ctx, () => { ctx.beginPath(); ctx.arc(cx, cy, r * .58, 0, 7); ctx.fillStyle = grad(ctx, cx - r, cy - r, cx + r, cy + r, GOLD); ctx.fill(); });
+                ctx.beginPath(); ctx.arc(cx, cy, r * .48, 0, 7); ctx.fillStyle = grad(ctx, cx, cy - r, cx, cy + r, NAVY); ctx.fill();
+                heartPath(ctx, cx, cy + r * .03, r * .4); ctx.fillStyle = grad(ctx, cx - r * .4, cy - r * .4, cx + r * .4, cy + r * .4, ROSE); ctx.fill();
+                gloss(ctx, cx - r * .14, cy - r * .1, r * .12, r * .07, .6); gloss(ctx, cx - r * .2, cy - r * .3, r * .28, r * .13, .2);
+            }
+            function badgeShield(ctx, cx, cy, r) {
+                dropShadow(ctx, () => { shieldPath(ctx, cx, cy, r * 1.0, r * 1.2); ctx.fillStyle = grad(ctx, cx - r, cy - r, cx + r, cy + r, GOLD); ctx.fill(); });
+                shieldPath(ctx, cx, cy + r * .02, r * .8, r * .98);
+                ctx.fillStyle = grad(ctx, cx - r * .4, cy - r * .5, cx + r * .4, cy + r * .5, SHIELD); ctx.fill();
+                gloss(ctx, cx - r * .18, cy - r * .32, r * .26, r * .13, .35);
+            }
+            function badgeBurst(ctx, cx, cy, r) {
+                dropShadow(ctx, () => { roundStar(ctx, cx, cy, r * .82, r * .64, 10); ctx.fillStyle = grad(ctx, cx - r, cy - r, cx + r, cy + r, PURPLE); ctx.fill(); });
+                roundStar(ctx, cx, cy, r * .82, r * .64, 10); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.stroke();
+                gloss(ctx, cx - r * .25, cy - r * .3, r * .38, r * .2, .4);
+                checkStroke(ctx, cx, cy + r * .03, r * .42);
+            }
+            function badgeLaurel(ctx, cx, cy, r) {
+                dropShadow(ctx, () => { ctx.beginPath(); ctx.arc(cx, cy, r * .62, 0, 7); ctx.fillStyle = grad(ctx, cx, cy - r, cx, cy + r, NAVY); ctx.fill(); });
+                ctx.beginPath(); ctx.arc(cx, cy, r * .62, 0, 7); ctx.lineWidth = r * .07; ctx.strokeStyle = grad(ctx, cx - r, cy - r, cx + r, cy + r, GOLD); ctx.stroke();
+                for (const d of [-1, 1]) for (let i = 0; i < 7; i++) {
+                    const a = Math.PI / 2 + d * (.38 + i * .34), x = cx + Math.cos(a) * r * .8, y = cy + Math.sin(a) * r * .8;
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(a + d * Math.PI / 2.6); ctx.beginPath(); ctx.ellipse(0, 0, r * .16, r * .085, 0, 0, 7);
+                    ctx.fillStyle = grad(ctx, -r * .15, 0, r * .15, 0, GOLD); ctx.fill(); ctx.restore();
+                }
+                crownPath(ctx, cx, cy + r * .04, r * .3); ctx.fillStyle = grad(ctx, cx, cy - r * .3, cx, cy + r * .25, GOLD); ctx.fill();
+                for (const dx of [-1, 0, 1]) { ctx.beginPath(); ctx.arc(cx + dx * r * .31, cy + r * .04 - (dx ? r * .14 : r * .21), r * .045, 0, 7); ctx.fillStyle = '#FEF3C7'; ctx.fill(); }
+                gloss(ctx, cx - r * .22, cy - r * .3, r * .3, r * .16, .22);
+            }
+            function badgeMedal(ctx, cx, cy, r) {
+                for (const d of [-1, 1]) {
+                    ctx.save(); ctx.translate(cx + d * r * .2, cy + r * .35); ctx.rotate(d * .22);
+                    ctx.beginPath(); ctx.moveTo(-r * .17, 0); ctx.lineTo(r * .17, 0); ctx.lineTo(r * .17, r * .62); ctx.lineTo(0, r * .5); ctx.lineTo(-r * .17, r * .62); ctx.closePath();
+                    ctx.fillStyle = grad(ctx, 0, 0, 0, r * .6, [[0, '#818CF8'], [1, '#4338CA']]); ctx.fill(); ctx.restore();
+                }
+                dropShadow(ctx, () => { roundStar(ctx, cx, cy - r * .08, r * .6, r * .54, 14); ctx.fillStyle = grad(ctx, cx - r, cy - r, cx + r, cy + r, [[0, '#C7D2FE'], [.5, '#818CF8'], [1, '#4338CA']]); ctx.fill(); });
+                ctx.beginPath(); ctx.arc(cx, cy - r * .08, r * .42, 0, 7); ctx.fillStyle = grad(ctx, cx, cy - r * .5, cx, cy + r * .4, [[0, '#6366F1'], [1, '#312E81']]); ctx.fill();
+                ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.stroke();
+                starPath(ctx, cx, cy - r * .07, r * .27, r * .12, 5); ctx.fillStyle = grad(ctx, cx, cy - r * .35, cx, cy + r * .2, GOLD); ctx.fill();
+                gloss(ctx, cx - r * .15, cy - r * .3, r * .25, r * .12, .3);
+            }
+            const BADGES = { 1: badgeHeartMedallion, 2: badgeShield, 3: badgeBurst, 4: badgeLaurel, 5: badgeMedal };
+            function sticker(ctx, n, cx, cy, r, rot) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); BADGES[n](ctx, 0, 0, r); ctx.restore(); }
+
+            // ---- progress pill: glowing dots, no outer glow ----
+            function progressPill(ctx, n, xRight, cy) {
+                const dots = 5, gap = 36, dr = 9, pw = dots * gap + 28, ph = 46, x = xRight - pw, y = cy - ph / 2;
+                rr(ctx, x, y, pw, ph, ph / 2); ctx.fillStyle = 'rgba(10,12,30,.75)'; ctx.fill();
+                rr(ctx, x, y, pw, ph, ph / 2); ctx.lineWidth = 2.5; ctx.strokeStyle = grad(ctx, x, 0, x + pw, 0, [[0, '#818CF8'], [.5, '#5EEAD4'], [1, '#C084FC']]); ctx.stroke();
+                for (let i = 1; i <= dots; i++) {
+                    const dx = x + 14 + gap / 2 + (i - 1) * gap;
+                    if (i < n) { ctx.save(); ctx.shadowColor = '#5EEAD4'; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(dx, cy, dr, 0, 7); ctx.fillStyle = '#6EE7B7'; ctx.fill(); ctx.restore(); }
+                    else if (i === n) {
+                        ctx.save(); ctx.shadowColor = '#F0ABFC'; ctx.shadowBlur = 20; ctx.beginPath(); ctx.arc(dx, cy, dr + 3, 0, 7);
+                        ctx.fillStyle = grad(ctx, dx - 12, cy - 12, dx + 12, cy + 12, [[0, '#A5F3FC'], [.5, '#C4B5FD'], [1, '#F9A8D4']]); ctx.fill(); ctx.restore();
+                        sparkle(ctx, dx - 3, cy - 3, 4.5, '#fff');
+                    } else { ctx.beginPath(); ctx.arc(dx, cy, dr - 1, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.fill(); }
+                }
+            }
+            function frame(ctx, n, label, footer) {
+                meshBg(ctx);
+                ctx.fillStyle = '#fff'; ctx.font = `800 30px ${FONT}`; tracked(ctx, label.toUpperCase(), M, 128, 5);
+                progressPill(ctx, n, CW - M, 118);
+                if (footer) { ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = `500 26px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText(footer, CW - M, CH - 90); ctx.textAlign = 'left'; }
+            }
+
+            // ---- the cards: each returns { truncated } ----
+            function drawSingle(ctx, n, label, text, footer, rule) {
+                frame(ctx, n, label, footer);
+                const py = 230, ph = 780;
+                glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
+                const p = fit(ctx, text, CW - 2 * M - 112, 520, { max: 84, min: 44, weight: 800, lh: 1.15 });
+                const blockH = p.lines.length * p.size * 1.15;
+                const top = py + 150 + Math.max(0, (520 - blockH) / 2);
+                ctx.fillStyle = '#fff'; ctx.font = `800 ${p.size}px ${FONT}`;
+                p.lines.forEach((l, i) => ctx.fillText(l, M + 56, top + p.size * 1.15 * i + p.size * .9));
+                ctx.fillStyle = grad(ctx, M + 56, 0, M + 152, 0, rule); ctx.fillRect(M + 56, py + ph - 90, 96, 8);
+                sticker(ctx, n, CW - M - 46, py + 30, 88, .12);
+                return { truncated: p.truncated };
+            }
+            function drawNeeds(ctx, d) {
+                frame(ctx, 3, 'Critical & Blatant', d.footer);
+                const mx = M, my = 200, mw = CW - 2 * M, mh = 620, hw = mw / 2, hh = mh / 2;
+                [['CRITICAL · LATENT', 0, 0, 0], ['CRITICAL · BLATANT', 1, 0, 1], ['ASPIRATIONAL · LATENT', 0, 1, 0], ['ASPIRATIONAL · BLATANT', 1, 1, 0]].forEach(([name, qx, qy], i) => {
+                    // The quadrant the dot lands in is the highlighted one.
+                    const hi = (qx === (d.x >= 50 ? 1 : 0)) && (qy === (d.y >= 50 ? 1 : 0));
+                    const x = mx + qx * hw + (qx ? 6 : 0), y = my + qy * hh + (qy ? 6 : 0), w = hw - 6, h = hh - 6;
+                    glassPanel(ctx, x, y, w, h, 24);
+                    if (hi) {
+                        rr(ctx, x + 1, y + 1, w - 2, h - 2, 23); ctx.save(); ctx.clip();
+                        const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, 'rgba(67,56,202,.35)'); g.addColorStop(1, 'rgba(20,184,166,.35)');
+                        ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.restore();
+                    }
+                    ctx.fillStyle = hi ? '#5EEAC4' : 'rgba(255,255,255,.55)'; ctx.font = `800 24px ${FONT}`; tracked(ctx, name, x + 34, y + h - 34, 3);
+                });
+                const px = mx + d.x / 100 * mw, py = my + d.y / 100 * mh;
+                ctx.fillStyle = grad(ctx, px - 46, 0, px + 46, 0); ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(px, py, 50, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+                ctx.fillStyle = grad(ctx, px - 26, 0, px + 26, 0); ctx.beginPath(); ctx.arc(px, py, 26, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.stroke();
+                const vy = 880; glassPanel(ctx, M, vy, CW - 2 * M, 320, 28);
+                ctx.fillStyle = grad(ctx, M + 48, 0, M + 460, 0); ctx.font = `800 28px ${FONT}`; tracked(ctx, 'WHERE THIS LANDS', M + 48, vy + 66, 5);
+                ctx.fillStyle = '#fff'; ctx.font = `800 70px ${FONT}`; ctx.fillText(d.verdict, M + 48, vy + 150);
+                const n = fit(ctx, d.text, CW - 2 * M - 96 - 90, 110, { max: 38, min: 30, weight: 500, lh: 1.3 });
+                ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `500 ${n.size}px ${FONT}`;
+                n.lines.forEach((l, i) => ctx.fillText(l, M + 48, vy + 190 + n.size * 1.3 * i + n.size));
+                sticker(ctx, 3, CW - M - 40, vy + 20, 78, .14);
+                return { truncated: n.truncated };
+            }
+            function drawBeforeAfter(ctx, d) {
+                frame(ctx, 4, 'Before & After', d.footer);
+                const pw = CW - 2 * M, pad = 64, py = 200, h1 = 440, h2 = 470;
+                glassPanel(ctx, M, py, pw, h1);
+                ctx.fillStyle = grad(ctx, M + pad, 0, M + pad + 36, 0); ctx.beginPath(); ctx.arc(M + pad + 18, py + pad + 14, 18, 0, 7); ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath();
+                ctx.moveTo(M + pad + 11, py + pad + 7); ctx.lineTo(M + pad + 25, py + pad + 21); ctx.moveTo(M + pad + 25, py + pad + 7); ctx.lineTo(M + pad + 11, py + pad + 21); ctx.stroke();
+                ctx.fillStyle = '#fff'; ctx.font = `800 28px ${FONT}`; tracked(ctx, 'BEFORE', M + pad + 52, py + pad + 24, 5);
+                { ctx.font = `800 28px ${FONT}`; const w = ctx.measureText('BEFORE').width + 6 * 5; ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('(Current Pain)', M + pad + 52 + w + 8, py + pad + 24); }
+                const b = fit(ctx, d.before, pw - 2 * pad, h1 - 130 - 50, { max: 56, min: 34, weight: 600 });
+                ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `600 ${b.size}px ${FONT}`;
+                b.lines.forEach((l, i) => ctx.fillText(l, M + pad, py + 130 + b.size * 1.22 * i + b.size));
+                const seamY = py + h1 + 30, ay = seamY + 30;
+                glassPanel(ctx, M, ay, pw, h2);
+                ctx.fillStyle = grad(ctx, M + pad, 0, M + pad + 36, 0); ctx.beginPath(); ctx.arc(M + pad + 18, ay + pad + 14, 18, 0, 7); ctx.fill();
+                ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(M + pad + 9, ay + pad + 14); ctx.lineTo(M + pad + 16, ay + pad + 21); ctx.lineTo(M + pad + 28, ay + pad + 8); ctx.stroke();
+                ctx.fillStyle = grad(ctx, M + pad + 52, 0, M + pad + 300, 0); ctx.font = `800 28px ${FONT}`; tracked(ctx, 'AFTER', M + pad + 52, ay + pad + 24, 5);
+                { ctx.font = `800 28px ${FONT}`; const w = ctx.measureText('AFTER').width + 5 * 5; ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('(Future Gain)', M + pad + 52 + w + 8, ay + pad + 24); }
+                const a = fit(ctx, d.after, pw - 2 * pad, h2 - 130 - 50, { max: 56, min: 34, weight: 700 });
+                ctx.fillStyle = '#fff'; ctx.font = `700 ${a.size}px ${FONT}`;
+                a.lines.forEach((l, i) => ctx.fillText(l, M + pad, ay + 130 + a.size * 1.22 * i + a.size));
+                ctx.fillStyle = grad(ctx, CW / 2 - 40, 0, CW / 2 + 40, 0); ctx.beginPath(); ctx.arc(CW / 2, seamY, 40, 0, 7); ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(CW / 2, seamY - 18); ctx.lineTo(CW / 2, seamY + 16); ctx.moveTo(CW / 2 - 14, seamY + 2); ctx.lineTo(CW / 2, seamY + 17); ctx.lineTo(CW / 2 + 14, seamY + 2); ctx.stroke();
+                sticker(ctx, 4, CW - M - 34, ay + 16, 80, .14);
+                return { truncated: b.truncated || a.truncated };
+            }
+            function drawPitch(ctx, d) {
+                frame(ctx, 5, 'One-line pitch', 'Made with CrashTest MVP');
+                const py = 230, ph = 780; glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
+                ctx.fillStyle = grad(ctx, M + 56, py + 70, M + 56, py + 300); ctx.font = `800 220px ${FONT}`; ctx.fillText('“', M + 40, py + 220);
+                const p = fit(ctx, d.text, CW - 2 * M - 112, 470, { max: 76, min: 40, weight: 800, lh: 1.15 });
+                ctx.fillStyle = '#fff'; ctx.font = `800 ${p.size}px ${FONT}`;
+                p.lines.forEach((l, i) => ctx.fillText(l, M + 56, py + 290 + p.size * 1.15 * i + p.size * .9));
+                if (d.name) {
+                    const ny = py + ph - 100; ctx.fillStyle = grad(ctx, M + 56, 0, M + 152, 0); ctx.fillRect(M + 56, ny, 96, 8);
+                    ctx.fillStyle = '#fff'; ctx.font = `700 36px ${FONT}`; ctx.fillText(d.name, M + 56, ny + 56);
+                }
+                sticker(ctx, 5, CW - M - 46, py + 30, 88, .12);
+                return { truncated: p.truncated };
+            }
+
+            // ---- wiring ----
+            const val = (id) => (document.getElementById(id)?.value || '').trim().replace(/\s+/g, ' ');
+            const founderName = () => ((isOwner() || !current ? profile : sharedOwner) || {}).name || '';
+            const canvasOf = (n) => document.getElementById('card_canvas_' + n);
+
+            function drawCard(n) {
+                const c = canvasOf(n); if (!c) return { truncated: false };
+                const ctx = c.getContext('2d'); ctx.clearRect(0, 0, CW, CH);
+                const name = founderName();
+                if (n === 1) return drawSingle(ctx, 1, "Who it's for", val('card_who'), name, [[0, '#FDE68A'], [1, '#F2B134']]);
+                if (n === 2) return drawSingle(ctx, 2, 'The pain', val('card_pain'), name, [[0, '#FB7185'], [1, '#F2B134']]);
+                if (n === 3) return drawNeeds(ctx, { x: graph.x, y: graph.y, verdict: `${graph.y < 50 ? 'Critical' : 'Aspirational'} & ${graph.x < 50 ? 'Latent' : 'Blatant'}`, text: val('card_need'), footer: name });
+                if (n === 4) return drawBeforeAfter(ctx, { before: val('card_before'), after: val('card_after'), footer: name });
+                return drawPitch(ctx, { text: val('card_pitch'), name });
+            }
+
+            let fontsReady = null;
+            function loadFonts() {
+                fontsReady ??= Promise.all([400, 500, 600, 700, 800].map((w) => document.fonts.load(`${w} 40px Inter`))).catch(() => {});
+                return fontsReady;
+            }
+            async function renderCards() {
+                await loadFonts();
+                for (let n = 1; n <= 5; n++) {
+                    const { truncated } = drawCard(n);
+                    document.getElementById('card_warn_' + n)?.classList.toggle('hidden', !truncated);
+                }
+            }
+            let timer = 0;
+            window.cardsChanged = function () { clearTimeout(timer); timer = setTimeout(renderCards, 150); };
+            window.renderCards = renderCards;
+            document.addEventListener('DOMContentLoaded', renderCards);
+
+            // ---- "Draft from my workbook": first sentence of the matching field, empty cards only ----
+            function firstSentence(text) {
+                const t = (text || '').trim().replace(/\s+/g, ' ');
+                if (!t) return '';
+                const m = t.match(/^.*?[.!?](?=\s|$)/);
+                const s = (m ? m[0] : t);
+                return s.length > 160 ? s.slice(0, 157).trimEnd() + '…' : s;
+            }
+            window.draftCardsFromWorkbook = function () {
+                const map = { card_who: 'mvs_narrative', card_pain: 'unworkable_txt', card_need: 'graph_text', card_before: 'life_before', card_after: 'life_after', card_pitch: 'gain_narrative' };
+                let filled = 0, missing = 0;
+                for (const [card, source] of Object.entries(map)) {
+                    const el = document.getElementById(card);
+                    if (!el || el.value.trim()) continue;
+                    const text = firstSentence(document.getElementById(source)?.value);
+                    if (text) { el.value = text; filled++; } else missing++;
+                }
+                if (filled) save();
+                showToast(filled ? `Drafted ${filled} card${filled > 1 ? 's' : ''} from your workbook.` + (missing ? ` ${missing} still empty; fill those in.` : '') : (missing ? 'Nothing to draft yet. Fill in the workbook above first.' : 'Every card already has text.'));
+            };
+
+            // ---- export: share sheet with files on phones, PNG downloads on laptops ----
+            const SETS = {
+                linkedin: { cards: [1, 2, 3, 4, 5], title: 'LinkedIn carousel' },
+                threads: { cards: [4, 5], title: 'Threads post' },
+            };
+            const SLUGS = { 1: 'who', 2: 'pain', 3: 'needs-map', 4: 'before-after', 5: 'pitch' };
+            const EMPTY_CHECK = { 1: ['card_who'], 2: ['card_pain'], 3: ['card_need'], 4: ['card_before', 'card_after'], 5: ['card_pitch'] };
+
+            function download(file) {
+                const url = URL.createObjectURL(file), a = document.createElement('a');
+                a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
+            window.exportCards = async function (kind) {
+                const set = SETS[kind];
+                const empty = set.cards.filter((n) => EMPTY_CHECK[n].some((id) => !val(id)));
+                if (empty.length) { showToast(`Fill in card${empty.length > 1 ? 's' : ''} ${empty.join(', ')} first, or use "Draft from my workbook".`); return; }
+                const btn = document.getElementById(kind === 'linkedin' ? 'cards-linkedin-btn' : 'cards-threads-btn');
+                if (btn) btn.disabled = true;
+                try {
+                    await renderCards();
+                    const files = [];
+                    for (const n of set.cards) {
+                        const blob = await new Promise((res) => canvasOf(n).toBlob(res, 'image/png'));
+                        if (!blob) throw new Error('Could not draw card ' + n);
+                        files.push(new File([blob], `CrashTest-MVP-card-${n}-${SLUGS[n]}.png`, { type: 'image/png' }));
+                    }
+                    const phone = window.matchMedia('(pointer: coarse)').matches;
+                    if (phone && navigator.canShare && navigator.canShare({ files })) {
+                        try { await navigator.share({ files, title: set.title }); return; }
+                        catch (e) {
+                            if (e.name === 'AbortError') return;
+                            // Some browsers reject multi-file shares: try one share per image (needs a tap each on iOS).
+                            try { for (const f of files) await navigator.share({ files: [f], title: set.title }); return; }
+                            catch (e2) { if (e2.name === 'AbortError') return; }
+                        }
+                    }
+                    files.forEach((f, i) => setTimeout(() => download(f), i * 300));
+                    showToast(`Saved ${files.length} image${files.length > 1 ? 's' : ''}.`);
+                } catch (e) {
+                    showToast('Could not make the images: ' + e.message);
+                } finally {
+                    if (btn) btn.disabled = false;
+                }
+            };
+        })();
     </script>
 </body>
 </html>
