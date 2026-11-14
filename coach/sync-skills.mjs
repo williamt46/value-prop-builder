@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the "coach edition" of gstack's office-hours and plan-ceo-review skills
-// for Value Prop Builder's local coach.
+// for CrashTest MVP's local coach.
 //
 //   node coach/sync-skills.mjs [outDir]       (default: coach/.claude/skills)
 //   GSTACK_DIR=/path/to/gstack node coach/sync-skills.mjs
@@ -139,7 +139,7 @@ Sanitize every query before it leaves the machine: search generalized category t
 
 const WORKBOOK_CONTEXT = `## Coach edition: where you are running (read first; overrides anything below)
 
-You are running inside **Value Prop Builder**, a web app where a founder fills in a value-proposition workbook. The founder talks to you through a chat panel; your AskUserQuestion calls appear as question cards.
+You are running inside **CrashTest MVP**, a web app where a founder fills in a value-proposition workbook. The founder talks to you through a chat panel; your AskUserQuestion calls appear as question cards.
 
 - **No repo, no shell, no files.** You have no Bash, Write or Edit tools and cannot open URLs or files. Skip any step that would need them. Never mention internal tooling, file paths or slash commands.
 - **The workbook is the artifact.** The founder's message includes the current workbook as text. Treat it as the founder's own words.`;

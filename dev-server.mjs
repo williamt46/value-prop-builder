@@ -97,4 +97,4 @@ http.createServer(async (req, res) => {
   }
   res.statusCode = 404;
   res.end('Not found');
-}).listen(PORT, HOST, () => console.log(`Value Prop Builder running at http://127.0.0.1:${PORT}`));
+}).listen(PORT, HOST, () => console.log(`CrashTest MVP running at http://127.0.0.1:${PORT}`));

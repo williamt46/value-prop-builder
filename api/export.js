@@ -10,7 +10,7 @@ const FORMATS = {
 };
 
 function filename(title, ext) {
-  const slug = title.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'Value-Prop-Workbook';
+  const slug = title.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'CrashTest-MVP-Workbook';
   return `${slug}-${new Date().toISOString().slice(0, 10)}.${ext}`;
 }
 

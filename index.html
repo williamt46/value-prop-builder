@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Underscore VC's Value Proposition Builder</title>
+    <title>CrashTest MVP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -139,7 +139,7 @@
         <!-- Sidebar -->
         <aside class="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 relative lg:fixed h-auto lg:h-full lg:overflow-y-auto no-print flex flex-col z-20">
             <div class="p-6">
-                <h1 class="text-xl font-bold text-blue-600">ValueProp Builder</h1>
+                <h1 class="text-xl font-bold text-blue-600">CrashTest MVP</h1>
                 <p class="text-xs text-slate-500 mt-1">Interactive Framework Guide</p>
             </div>
             <nav class="mt-4 flex-1">
@@ -238,7 +238,7 @@
         <!-- Main Content -->
         <main class="flex-1 ml-0 lg:ml-64 p-4 md:p-8 lg:p-12 w-full">
             <header class="mb-12">
-                <h2 class="text-3xl font-bold text-slate-900">Underscore VC's Value Proposition Builder</h2>
+                <h2 class="text-3xl font-bold text-slate-900">CrashTest MVP</h2>
                 <p class="text-slate-500 max-w-2xl mt-2">Use this space to define, evaluate, and build a product people actually want.</p>
             </header>
 
@@ -754,7 +754,7 @@
                 try { const v = localStorage.getItem(STORE + key); return v === null ? fallback : v; } catch (e) { return fallback; }
             },
             set(key, value) {
-                try { localStorage.setItem(STORE + key, value); } catch (e) { console.warn('ValueProp: localStorage save failed for', key, e); }
+                try { localStorage.setItem(STORE + key, value); } catch (e) { console.warn('CrashTest MVP: localStorage save failed for', key, e); }
             },
             remove(key) {
                 try { localStorage.removeItem(STORE + key); } catch (e) {}
@@ -1128,7 +1128,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         format,
-                        title: current?.title || 'Value Proposition Workbook',
+                        title: current?.title || 'CrashTest MVP Workbook',
                         owner: isOwner() || !current ? profile : sharedOwner,
                         data: collectData()
                     })
@@ -1139,7 +1139,7 @@
                 }
                 const blob = await res.blob();
                 const disposition = res.headers.get('Content-Disposition') || '';
-                const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || `Value-Prop-Workbook.${format}`;
+                const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || `CrashTest-MVP-Workbook.${format}`;
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
