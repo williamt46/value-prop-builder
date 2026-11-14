@@ -31,21 +31,51 @@ Open http://127.0.0.1:3000 (`localhost` redirects there). Workbooks are stored i
 
 **Event mode (one link for a room of attendees)**
 
-Attendees open one link and get their own brain-dump coach session on an Anthropic API key, then make their share cards. It runs only on the local dev server.
+Attendees open one link and get their own brain-dump coach session on an Anthropic API key, then make their share cards. It runs only on this laptop's dev server, reached through a Cloudflare tunnel. Attendees never get your Claude login, your ChatGPT sign-in or the owner page.
 
-1. In the [Anthropic Console](https://console.anthropic.com), set a spend limit on the API key you use for the event. That limit is the only hard cap on spend.
-2. Start the server with both variables set (without both, nothing changes):
+*Once, before the event*
+
+1. Install the tunnel (no account needed): `brew install cloudflared`.
+2. Put the event API key in `.env` in this folder (git ignores it) as one line: `ANTHROPIC_API_KEY=sk-ant-...`.
+3. In the [Anthropic Console](https://console.anthropic.com), set a spend limit on that key. That limit is the only hard cap on spend. A brain-dump session cost about $0.10 to $0.16 in testing.
+4. Pick an event code, e.g. `roundtable-nov14`. Anyone with the link can use your key, so don't post the link publicly.
+5. Clear old test data so it doesn't show on your owner page: `rm -rf data/event-state.json data/event-claude`. To also drop test workbooks, delete `data/workbooks.db`.
+
+*Start (three terminal tabs, in this folder, in this order)*
+
+1. Keep the laptop awake and plugged in:
    ```bash
-   EVENT_CODE=pick-a-code ANTHROPIC_API_KEY=sk-ant-... npm run dev
+   caffeinate -dis
    ```
-   `COACH_MODEL` overrides the attendee model (default `claude-sonnet-5-5`).
-3. Keep the laptop awake with `caffeinate -dis` in another terminal, then open a tunnel with no host-header flag:
+2. Start the server. `--env-file` loads the key from `.env` so it never lands in your shell history:
+   ```bash
+   EVENT_CODE=roundtable-nov14 node --env-file=.env dev-server.mjs
+   ```
+   You should see `Event mode ON`. If you don't, the key or code is missing and the coach stays off.
+3. Open the tunnel, with no host-header flag. Adding one makes attendees look like you:
    ```bash
    cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000
    ```
-4. Share `https://<tunnel>.trycloudflare.com/?e=<EVENT_CODE>`. The code is exchanged once for a signed cookie and removed from the URL.
+   It prints `https://<words>.trycloudflare.com`. **Wait about 10 seconds** before opening it; opening it too early can cache a "not found". The address changes every time you restart the tunnel.
+4. Test it yourself on your phone, on cellular, not your wifi: open `https://<words>.trycloudflare.com/?e=roundtable-nov14`, run a brain dump, press **Make my cards**, and download or share the images. Card download on a real phone has not been tested yet, so do this before anyone arrives.
+5. Share that same link with the code on the end. The code is swapped once for a cookie and removed from the URL. Put the link on a slide or a QR code.
 
-Attendees get office-hours brain dump only (no guided session, CEO review or ChatGPT sign-in), up to 10 coach turns at once and one per attendee, 25 model calls per turn, and question cards that pause after 5 minutes (sending a message resumes). Their coach transcripts go to `data/event-claude/`; session bindings and spend go to `data/event-state.json`, and the server logs each turn's cost. Pressing **Make my cards** or **Save** stores the workbook; you see them at http://127.0.0.1:3000/owner on this laptop. Run `npm test` for the event-mode unit tests.
+*During the event*
+
+- Attendees get office-hours brain dump only (no guided session, CEO review or ChatGPT sign-in). Up to 10 coach turns run at once and one per attendee, with 25 model calls per turn. Question cards pause after 5 minutes and resume when they send a message. A reload resumes their session.
+- Their ideas pass through this laptop and the Anthropic API. The start screen tells them so.
+- Watch the server tab: it logs each turn's cost and any errors.
+- See what people saved at http://127.0.0.1:3000/owner on this laptop. **Make my cards** and **Save** store the workbook.
+- If the server restarts, attendees keep their link and sessions. If the tunnel restarts you get a new address, so re-share it.
+- If the coach breaks for everyone, fall back to cards by hand: attendees fill the card boxes themselves and download, no AI needed.
+
+*After the event*
+
+1. Stop all three tabs with Ctrl+C. This closes the link.
+2. Revoke or delete the API key in the Console, or check its spend.
+3. Attendee data stays on this laptop in `data/`: coach transcripts in `data/event-claude/`, session bindings and spend in `data/event-state.json`, workbooks in `data/workbooks.db`. Export what you need and delete the rest.
+
+Run `npm test` for the event-mode unit tests. `COACH_MODEL` overrides the attendee model (default `claude-sonnet-5-5`).
 
 **Deploy to Vercel**
 
