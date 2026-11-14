@@ -3,6 +3,7 @@ import { buildDocx } from '../lib/export-docx.js';
 import { buildPdf } from '../lib/export-pdf.js';
 import { HttpError, sanitizeData, sanitizeOwner, sanitizeTitle } from '../lib/fields.js';
 import { readJson, route } from '../lib/http.js';
+import { writeAccess } from '../lib/event.js';
 
 const FORMATS = {
   docx: { build: buildDocx, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
@@ -16,6 +17,7 @@ function filename(title, ext) {
 
 // POST /api/export — render the current workbook (saved or not) as DOCX or PDF.
 export const POST = route(async (request) => {
+  if (!writeAccess(request)) throw new HttpError(404, 'Not found');
   const body = await readJson(request);
   const format = FORMATS[body.format];
   if (!format) throw new HttpError(400, 'Format must be docx or pdf');
