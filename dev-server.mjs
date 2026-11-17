@@ -126,6 +126,13 @@ async function handle(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.end(await readFile(new URL('./owner.html', import.meta.url)));
   }
+  // QR library for the owner page (vendor/qrcode.js, MIT). Owner only.
+  if (pathname === '/owner/qrcode.js') {
+    const request = await toRequest(req, res);
+    if (!isOwner(request)) { res.statusCode = 404; return res.end('Not found'); }
+    res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+    return res.end(await readFile(new URL('./vendor/qrcode.js', import.meta.url)));
+  }
 
   if (pathname === '/' || pathname === '/index.html') {
     // Event link: /?e=<code> is exchanged once for an attendee cookie, then the code leaves the URL.
