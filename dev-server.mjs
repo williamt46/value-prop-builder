@@ -112,6 +112,7 @@ async function handle(req, res) {
   // Local demo snapshots (docs/demo/<name>.html), e.g. /demo/vet-no-show restores a coach demo.
   const demo = /^\/demo\/([a-z0-9-]+)$/.exec(pathname);
   if (demo) {
+    if (!isOwner(await toRequest(req, res))) { res.statusCode = 404; return res.end('Not found'); }
     try {
       const page = await readFile(new URL(`./docs/demo/${demo[1]}.html`, import.meta.url));
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -124,7 +125,10 @@ async function handle(req, res) {
     const request = await toRequest(req, res);
     if (!isOwner(request)) { res.statusCode = 404; return res.end('Not found'); }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.end(await readFile(new URL('./lib/owner.html', import.meta.url)));
+    const defaults = { base: await liveTunnelBase(), code: process.env.EVENT_CODE || '' };
+    const html = (await readFile(new URL('./lib/owner.html', import.meta.url), 'utf8'))
+      .replace('/*__OWNER_DEFAULTS__*/{}', () => JSON.stringify(defaults).replace(/</g, '\\u003c'));
+    return res.end(html);
   }
   // QR library for the owner page (lib/vendor/qrcode.js, MIT). Owner only.
   if (pathname === '/owner/qrcode.js') {
@@ -152,6 +156,18 @@ async function handle(req, res) {
   }
   res.statusCode = 404;
   res.end('Not found');
+}
+
+// The cloudflared quick tunnel reports its public hostname on its local metrics port.
+async function liveTunnelBase() {
+  for (let port = 20241; port <= 20245; port++) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${port}/quicktunnel`, { signal: AbortSignal.timeout(400) });
+      const { hostname } = await r.json();
+      if (typeof hostname === 'string' && /^[a-z0-9.-]+$/i.test(hostname)) return `https://${hostname}`;
+    } catch {}
+  }
+  return '';
 }
 
 http.createServer(async (req, res) => {

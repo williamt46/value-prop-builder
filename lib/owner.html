@@ -61,15 +61,27 @@
   </main>
   <script src="/owner/qrcode.js"></script>
   <script>
-    const DEFAULTS = { base: 'https://tall-mentioned-read-trinity.trycloudflare.com', code: 'roundtable' };
+    // The server fills these in from the running tunnel and EVENT_CODE (nothing is committed here).
+    const LIVE = /*__OWNER_DEFAULTS__*/{};
+    const DEFAULTS = { base: LIVE.base || '', code: LIVE.code || '' };
     const $ = (id) => document.getElementById(id);
     let cfg = { ...DEFAULTS };
-    try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem('eventLink') || '{}') }; } catch {}
+    try {
+      const saved = JSON.parse(localStorage.getItem('eventLink') || '{}');
+      // Live values from the server win; saved ones only fill in what the server could not detect.
+      for (const k of ['base', 'code']) if (!cfg[k] && typeof saved[k] === 'string') cfg[k] = saved[k];
+    } catch {}
     function attendeeLink() {
       const base = cfg.base.trim().replace(/\/+$/, '');
       return base + '/?e=' + encodeURIComponent(cfg.code.trim());
     }
     function renderJoin() {
+      if (!cfg.base.trim() || !cfg.code.trim()) {
+        $('qr').textContent = '';
+        $('link').textContent = 'Enter the tunnel address and event code below';
+        $('join').querySelector('details').open = true;
+        return;
+      }
       const url = attendeeLink();
       const qr = qrcode(0, 'M');
       qr.addData(url);
