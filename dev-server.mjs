@@ -124,14 +124,14 @@ async function handle(req, res) {
     const request = await toRequest(req, res);
     if (!isOwner(request)) { res.statusCode = 404; return res.end('Not found'); }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.end(await readFile(new URL('./owner.html', import.meta.url)));
+    return res.end(await readFile(new URL('./lib/owner.html', import.meta.url)));
   }
-  // QR library for the owner page (vendor/qrcode.js, MIT). Owner only.
+  // QR library for the owner page (lib/vendor/qrcode.js, MIT). Owner only.
   if (pathname === '/owner/qrcode.js') {
     const request = await toRequest(req, res);
     if (!isOwner(request)) { res.statusCode = 404; return res.end('Not found'); }
     res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
-    return res.end(await readFile(new URL('./vendor/qrcode.js', import.meta.url)));
+    return res.end(await readFile(new URL('./lib/vendor/qrcode.js', import.meta.url)));
   }
 
   if (pathname === '/' || pathname === '/index.html') {
