@@ -1,0 +1,121 @@
+{
+  "builtAt": "2026-11-12T08:46:19.960Z",
+  "workbook": {
+    "id": "0y_ahYODp0CY",
+    "title": "Vet clinic no-show killer (coach demo)"
+  },
+  "data": {
+    "mvs_narrative": "Small independent veterinary clinics with 2-4 vets that run on AVImark, book about 150 appointments a week, and confirm appointments by phone because text reminders get ignored. The first customer is Dana, my sister, who runs Riverbend Animal Clinic in Portland (3 vets, about 150 appointments a week). Her front desk lead, Maria, spends about 90 minutes every afternoon calling the next day's appointments, and the front desk is stretched. Dana knows her numbers: about 12% of appointments no-show, at about $180 lost each. The segment is clinics like hers that already track no-shows and already pay staff time to fight them. There are roughly 30k independent vet practices in the US. (Evidence needed: how many AVImark clinics outside my sister's are doing day-before phone calls today.)",
+    "unworkable_txt": "At Riverbend, about 12% of appointments no-show and each one costs about $180. The current fix is Maria calling every client the day before, which takes about 90 minutes of front desk time every afternoon. AVImark's built-in text reminders exist, but clients ignore them, so the clinic pays for the reminders and still pays for the calls. When a client does cancel, the slot usually goes empty because nobody has time to work a waitlist by phone.",
+    "unavoidable_txt": "No law forces this. The pressure comes from the economics: an empty exam slot with a vet and tech on the clock is lost revenue that cannot be recovered later, and the clinic already decided the problem is worth 90 minutes of paid staff time a day. (Evidence needed: whether no-shows also cause a clinical cost, such as missed vaccines or follow-ups, that makes the clinic feel obligated to chase them.)",
+    "urgent_txt": "The front desk is stretched. Maria already spends about 90 minutes every afternoon on confirmation calls, and that time comes out of checking in clients, answering phones and handling the lobby. At a small clinic, one stretched front desk person is a weekly problem the owner feels now, not a someday cost. Every week it waits, Riverbend loses another 18 or so no-shows, about $3,200. (Evidence needed: Dana's own words on the front desk strain, for example an open position, overtime, or calls that get skipped on busy days.)",
+    "underserved_txt": "The status quo is the competitor: AVImark's built-in text reminders plus a human making phone calls. Dana's clinic tried the texts and clients ignore them, because a reminder that only says \"see you tomorrow\" gives the client nothing to do. The phone calls work better but cost about 90 minutes a day. Of the two other clinics I talked to, one already uses PetDesk, so a dedicated reminder app exists in this market. My claim is that none of these let the client rebook or cancel in one tap and then refill the freed slot automatically. (Evidence needed: what PetDesk actually does with cancellations, and why the PetDesk clinic would or would not switch.)",
+    "maslow_narrative": "For the clinic owner, the need is control: knowing tomorrow's schedule will actually happen and that her vets' time turns into revenue. For the front desk, it is relief from a repetitive afternoon of phone calls that pulls them away from the clients standing in front of them.",
+    "graph_text": "This is a blatant need: Dana can quote her no-show rate and the dollars lost, and the clinic already spends paid staff time every day fighting it. It leans critical rather than aspirational because each no-show is lost revenue on a fixed-cost schedule, but it is a cost leak, not a threat to the clinic's survival. The risk on this map is the other two clinics: one said \"interesting\" and one is already covered by PetDesk, which suggests the need may feel less blatant outside Riverbend.",
+    "disruptive_txt": "It replaces a 90-minute daily phone routine with reminders the client can act on. The clinic stops paying front desk time to confirm appointments one call at a time, and the job happens without staff involvement.",
+    "discontinuous_txt": "Today, when a client cancels late, the slot is simply lost. With one-tap cancel or rebook tied to a waitlist, a cancellation at 7pm can become a filled slot by morning without anyone at the clinic picking up a phone. The clinic gets revenue back from cancellations it currently writes off. I don't yet know whether Riverbend keeps a waitlist today, so this is still an unproven bet. (Evidence needed: whether Riverbend keeps a waitlist now, and how often a waitlisted client would actually take a same-day or next-day slot.)",
+    "moat_ip": "None today. One-tap rebook links and waitlist matching are not patentable in any useful way. Any edge here comes from execution and the AVImark integration, not IP.",
+    "moat_switching": "Clinics hate switching software, which cuts both ways. It protects me once I am embedded in a clinic's daily schedule flow. It also means I should sit on top of AVImark as an add-on rather than ask anyone to replace their practice management system, and it makes clinics already on PetDesk hard to win.",
+    "moat_network": "No clear network effect yet. Each clinic's waitlist and clients are its own. (Evidence needed: whether anything gets better for clinic A when clinic B joins, for example pet owners who use multiple clinics or a shared booking habit.)",
+    "moat_data": "Possible but unproven. Over time I would see which clients no-show, which reminder timing and wording gets a response, and which waitlisted clients actually take a freed slot. Across many clinics that could predict no-shows better than any single clinic can. Per clinic, waitlist data alone is thin and is not a moat. (Evidence needed: whether no-show prediction measurably beats simple reminders once I have data from several clinics.)",
+    "life_before": "Riverbend books about 150 appointments a week across 3 vets. Every afternoon, Maria spends about 90 minutes calling tomorrow's clients one by one. The AVImark text reminders go out too, and clients ignore them. Even with the calls, about 12% of appointments no-show, around 18 a week at about $180 each. That is roughly $3,200 a week, or about $14,000 a month, in lost revenue. When someone cancels late, the slot sits empty because nobody has time to call around to fill it.",
+    "life_after": "Clients get a reminder they can act on: confirm, rebook or cancel in one tap. A cancellation opens the slot to the waitlist automatically, and a waitlisted client grabs it. Maria gets her afternoons back for the clients in the lobby. Dana's goal is no-shows cut in half, from about 12% to about 6%.",
+    "gain_narrative": "Two gains in the clinic's own terms. First, about 90 minutes a day of front desk time returned to a stretched front desk. Second, revenue recovered. At about 150 appointments a week, Riverbend loses about 18 no-shows a week, roughly $3,200 a week or $14,000 a month. Cutting no-shows in half, Dana's own bar, recovers about $1,600 a week, roughly $7,000 a month. Dana said she would pay $200/mo for that, which is about 3% of the value recovered. The ROI is not the hard part of this sale. Proving the halving is.",
+    "pain_narrative": "The clinic has to connect a new tool to AVImark, trust it with client contact, and change a front desk habit that works, if expensively. Clinics hate switching software, so this must be an add-on that needs almost no setup, not a replacement. For clinics already on PetDesk, the pain is higher: they would be paying twice or ripping something out. The price, around $200/mo, is low next to the revenue at stake.",
+    "graph_x": 75,
+    "graph_y": 35,
+    "gain_range": 65,
+    "pain_range": 4
+  },
+  "coach": {
+    "mode": "office-hours",
+    "path": "braindump",
+    "sessionId": "3cb44090-6082-47b7-8c8b-cba7aa3f9fbc",
+    "log": [
+      {
+        "role": "user",
+        "text": "ok so the idea: no-show killer for small vet clinics. my sister Dana runs Riverbend Animal Clinic (3 vets, Portland) and she says ~12% of appts no-show, each one is ~$180 lost. they use AVImark and the front desk calls everyone the day before, takes Maria (front desk) like 90 min every afternoon. they tried the built-in text reminders but people ignore them. idea is reminders where you can rebook/cancel in one tap and the slot auto-fills from a waitlist. Dana said she'd pay $200/mo if it cut no-shows in half. talked to 2 other clinics, one said \"interesting\", one said they already use PetDesk. ~30k independent vet practices in the US. I think the waitlist data could be a moat?? not sure. clinics hate switching software."
+      },
+      {
+        "role": "fill",
+        "fields": {
+          "mvs_narrative": "Small independent veterinary clinics with 2-4 vets that run on AVImark and confirm appointments by phone. The first customer is Dana, my sister, who runs Riverbend Animal Clinic in Portland (3 vets). Her front desk lead, Maria, spends about 90 minutes every afternoon calling the next day's appointments. Dana knows her numbers: about 12% of appointments no-show, at about $180 lost each. The segment is clinics like hers that already track no-shows and already pay staff time to fight them. There are roughly 30k independent vet practices in the US. (Evidence needed: how many AVImark clinics outside my sister's are doing day-before phone calls today.)",
+          "unworkable_txt": "At Riverbend, about 12% of appointments no-show and each one costs about $180. The current fix is Maria calling every client the day before, which takes about 90 minutes of front desk time every afternoon. AVImark's built-in text reminders exist, but clients ignore them, so the clinic pays for the reminders and still pays for the calls. When a client does cancel, the slot usually goes empty because nobody has time to work a waitlist by phone.",
+          "unavoidable_txt": "No law forces this. The pressure comes from the economics: an empty exam slot with a vet and tech on the clock is lost revenue that cannot be recovered later, and the clinic already decided the problem is worth 90 minutes of paid staff time a day. (Evidence needed: whether no-shows also cause a clinical cost, such as missed vaccines or follow-ups, that makes the clinic feel obligated to chase them.)",
+          "urgent_txt": "(Evidence needed: why this has to be solved now and not next year. For example, a front desk staffing shortage, Maria leaving or being stretched thin, a revenue squeeze, or a no-show rate that is getting worse.)",
+          "underserved_txt": "The status quo is the competitor: AVImark's built-in text reminders plus a human making phone calls. Dana's clinic tried the texts and clients ignore them, because a reminder that only says \"see you tomorrow\" gives the client nothing to do. The phone calls work better but cost about 90 minutes a day. Of the two other clinics I talked to, one already uses PetDesk, so a dedicated reminder app exists in this market. My claim is that none of these let the client rebook or cancel in one tap and then refill the freed slot automatically. (Evidence needed: what PetDesk actually does with cancellations, and why the PetDesk clinic would or would not switch.)",
+          "graph_text": "This is a blatant need: Dana can quote her no-show rate and the dollars lost, and the clinic already spends paid staff time every day fighting it. It leans critical rather than aspirational because each no-show is lost revenue on a fixed-cost schedule, but it is a cost leak, not a threat to the clinic's survival. The risk on this map is the other two clinics: one said \"interesting\" and one is already covered by PetDesk, which suggests the need may feel less blatant outside Riverbend.",
+          "maslow_narrative": "For the clinic owner, the need is control: knowing tomorrow's schedule will actually happen and that her vets' time turns into revenue. For the front desk, it is relief from a repetitive afternoon of phone calls that pulls them away from the clients standing in front of them.",
+          "disruptive_txt": "It replaces a 90-minute daily phone routine with reminders the client can act on. The clinic stops paying front desk time to confirm appointments one call at a time, and the job happens without staff involvement.",
+          "discontinuous_txt": "Today, when a client cancels late, the slot is simply lost. With one-tap cancel or rebook tied to a waitlist, a cancellation at 7pm can become a filled slot by morning without anyone at the clinic picking up a phone. The clinic gets revenue back from cancellations it currently writes off. (Evidence needed: whether Riverbend keeps a waitlist today, and how often a waitlisted client would actually take a same-day or next-day slot.)",
+          "moat_ip": "None today. One-tap rebook links and waitlist matching are not patentable in any useful way. Any edge here comes from execution and the AVImark integration, not IP.",
+          "moat_switching": "Clinics hate switching software, which cuts both ways. It protects me once I am embedded in a clinic's daily schedule flow. It also means I should sit on top of AVImark as an add-on rather than ask anyone to replace their practice management system, and it makes clinics already on PetDesk hard to win.",
+          "moat_network": "No clear network effect yet. Each clinic's waitlist and clients are its own. (Evidence needed: whether anything gets better for clinic A when clinic B joins, for example pet owners who use multiple clinics or a shared booking habit.)",
+          "moat_data": "Possible but unproven. Over time I would see which clients no-show, which reminder timing and wording gets a response, and which waitlisted clients actually take a freed slot. Across many clinics that could predict no-shows better than any single clinic can. Per clinic, waitlist data alone is thin and is not a moat. (Evidence needed: whether no-show prediction measurably beats simple reminders once I have data from several clinics.)",
+          "life_before": "Every afternoon, Maria at Riverbend spends about 90 minutes calling tomorrow's clients one by one. The AVImark text reminders go out too, and clients ignore them. Even with the calls, about 12% of appointments no-show, each costing about $180. When someone cancels late, the slot sits empty because nobody has time to call around to fill it.",
+          "life_after": "Clients get a reminder they can act on: confirm, rebook or cancel in one tap. A cancellation opens the slot to the waitlist automatically, and a waitlisted client grabs it. Maria gets her afternoons back for the clients in the lobby. Dana's goal is no-shows cut in half, from about 12% to about 6%.",
+          "gain_narrative": "Two gains in the clinic's own terms. First, roughly 90 minutes a day of front desk time returned. Second, revenue recovered: every no-show avoided or slot refilled is about $180. Dana said she would pay $200/mo if it cut no-shows in half, which means she already believes the recovered revenue is worth far more than $200. (Evidence needed: Riverbend's monthly appointment volume, to turn 12% at $180 into a monthly dollar figure.)",
+          "pain_narrative": "The clinic has to connect a new tool to AVImark, trust it with client contact, and change a front desk habit that works, if expensively. Clinics hate switching software, so this must be an add-on that needs almost no setup, not a replacement. For clinics already on PetDesk, the pain is higher: they would be paying twice or ripping something out. The price, around $200/mo, is low next to the revenue at stake.",
+          "graph_x": 75,
+          "graph_y": 40,
+          "pain_range": 4,
+          "gain_range": 50
+        },
+        "note": "Filled every field from your notes; gaps flagged as (Evidence needed)."
+      },
+      {
+        "role": "answer",
+        "text": "Does Riverbend Animal Clinic keep a waitlist today? → I don't know"
+      },
+      {
+        "role": "answer",
+        "text": "Roughly how many appointments does Riverbend book per week? → About 150 a week across the 3 vets."
+      },
+      {
+        "role": "answer",
+        "text": "Why does Riverbend need this fixed now and not next year? → Front desk stretched"
+      },
+      {
+        "role": "fill",
+        "fields": {
+          "urgent_txt": "The front desk is stretched. Maria already spends about 90 minutes every afternoon on confirmation calls, and that time comes out of checking in clients, answering phones and handling the lobby. At a small clinic, one stretched front desk person is a weekly problem the owner feels now, not a someday cost. Every week it waits, Riverbend loses another 18 or so no-shows, about $3,200. (Evidence needed: Dana's own words on the front desk strain, for example an open position, overtime, or calls that get skipped on busy days.)",
+          "life_before": "Riverbend books about 150 appointments a week across 3 vets. Every afternoon, Maria spends about 90 minutes calling tomorrow's clients one by one. The AVImark text reminders go out too, and clients ignore them. Even with the calls, about 12% of appointments no-show, around 18 a week at about $180 each. That is roughly $3,200 a week, or about $14,000 a month, in lost revenue. When someone cancels late, the slot sits empty because nobody has time to call around to fill it.",
+          "gain_narrative": "Two gains in the clinic's own terms. First, about 90 minutes a day of front desk time returned to a stretched front desk. Second, revenue recovered. At about 150 appointments a week, Riverbend loses about 18 no-shows a week, roughly $3,200 a week or $14,000 a month. Cutting no-shows in half, Dana's own bar, recovers about $1,600 a week, roughly $7,000 a month. Dana said she would pay $200/mo for that, which is about 3% of the value recovered. The ROI is not the hard part of this sale. Proving the halving is.",
+          "discontinuous_txt": "Today, when a client cancels late, the slot is simply lost. With one-tap cancel or rebook tied to a waitlist, a cancellation at 7pm can become a filled slot by morning without anyone at the clinic picking up a phone. The clinic gets revenue back from cancellations it currently writes off. I don't yet know whether Riverbend keeps a waitlist today, so this is still an unproven bet. (Evidence needed: whether Riverbend keeps a waitlist now, and how often a waitlisted client would actually take a same-day or next-day slot.)",
+          "mvs_narrative": "Small independent veterinary clinics with 2-4 vets that run on AVImark, book about 150 appointments a week, and confirm appointments by phone because text reminders get ignored. The first customer is Dana, my sister, who runs Riverbend Animal Clinic in Portland (3 vets, about 150 appointments a week). Her front desk lead, Maria, spends about 90 minutes every afternoon calling the next day's appointments, and the front desk is stretched. Dana knows her numbers: about 12% of appointments no-show, at about $180 lost each. The segment is clinics like hers that already track no-shows and already pay staff time to fight them. There are roughly 30k independent vet practices in the US. (Evidence needed: how many AVImark clinics outside my sister's are doing day-before phone calls today.)",
+          "gain_range": 65,
+          "graph_y": 35
+        },
+        "note": "Added Riverbend's volume (~$14k/mo in no-shows), the front-desk why-now, and flagged the waitlist as unknown."
+      },
+      {
+        "role": "assistant",
+        "text": "I filled all 18 fields from your notes and your three answers. Anything your notes didn't back up is marked \"(Evidence needed: …)\" in the workbook.\n\n**Your biggest number:** at about 150 appointments a week, Riverbend loses roughly 18 no-shows a week. That's about $3,200 a week, or $14k a month. If you cut that in half, Dana gets back about $7k a month. She offered $200 a month, which is about 3% of that. The price isn't what will make or break the sale. Whether you can actually halve no-shows is.\n\n**Scores I set:** the needs map is at 75/35 (Dana feels the problem clearly, and it's close to critical). Gain is 65 and pain is 4. I kept pain low because this sits on top of AVImark rather than replacing it.\n\n**Weak spots, and the question that tests each one:**\n- **Demand.** Dana is your sister, and so far she's only said she'd pay. Outside Riverbend you have one clinic that said \"interesting\" and one already using PetDesk, a dedicated reminder app. *Would a clinic owner who isn't related to you pay before the product works?*\n- **Underserved.** PetDesk is already in this market. *What does PetDesk do when a client cancels, and why hasn't the clinic using it solved no-shows?*\n- **Waitlist.** You don't know if Riverbend keeps one, and the auto-fill feature depends on it. *If no one is waiting, what fills the empty slot?*\n- **Data moat.** One clinic's waitlist is too small to protect you. It only becomes a real advantage if data from many clinics predicts no-shows better than plain reminders do. *What data would you have after 10 clinics that a copycat wouldn't?*\n- **Network effects and IP.** These are honestly empty. That's fine at this stage.\n- **Urgency.** Right now it rests on your read that the front desk is stretched. *Is that how Dana would put it, or is that you?*\n\n**The Assignment:** Sit next to Maria for one afternoon of confirmation calls this week, and don't help. For every call, write down whether the client picks up and confirms, cancels, wants to move the appointment, or doesn't answer. While you're there, ask Dana two things: does the clinic keep a waitlist, and would she prepay one month at $200 for a 30-day pilot? That one afternoon tells you three things: whether one-tap rebooking matches what clients actually do on the phone, whether auto-fill has a waitlist to draw from, and whether Dana will pay before it works.\n\nSTATUS: DONE_WITH_CONCERNS. The waitlist, the PetDesk comparison and demand from clinics other than Dana's are still unverified."
+      }
+    ],
+    "paused": true,
+    "undo": {
+      "mvs_narrative": "Small independent veterinary clinics.",
+      "unworkable_txt": "",
+      "unavoidable_txt": "",
+      "urgent_txt": "",
+      "underserved_txt": "",
+      "maslow_narrative": "",
+      "graph_text": "",
+      "disruptive_txt": "",
+      "discontinuous_txt": "",
+      "moat_ip": "",
+      "moat_switching": "",
+      "moat_network": "",
+      "moat_data": "",
+      "life_before": "",
+      "life_after": "",
+      "gain_narrative": "",
+      "pain_narrative": "",
+      "graph_x": 50,
+      "graph_y": 50,
+      "gain_range": 5,
+      "pain_range": 5
+    }
+  }
+}

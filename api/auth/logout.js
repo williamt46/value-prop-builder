@@ -10,11 +10,13 @@ export const POST = route(async (request) => {
   if (session) {
     const refreshToken = sessionTokens(session)?.refresh_token;
     if (refreshToken) {
-      revoked = await revokeRefreshToken(authConfig(request), refreshToken).catch(() => false);
+      revoked = await Promise.resolve()
+        .then(() => revokeRefreshToken({ ...authConfig(request), clientId: session.client_id }, refreshToken))
+        .catch(() => false);
     }
     await deleteSession(session);
   }
   const res = json(200, { signedIn: false, revoked });
-  res.headers.append('Set-Cookie', clearSessionCookie());
+  res.headers.append('Set-Cookie', clearSessionCookie(request));
   return res;
 });

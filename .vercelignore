@@ -1,0 +1,15 @@
+# A .vercelignore replaces .gitignore for `vercel deploy` uploads, so local secrets and data are
+# excluded again here. Keep these in sync with .gitignore.
+.env
+.env*
+data/
+*.db
+.gstack/
+.claude/worktrees/
+.DS_Store
+
+# The coach runs only on a local dev server (it uses the owner's Claude Code login).
+api/coach.js
+api/coach/
+lib/coach.js
+coach/

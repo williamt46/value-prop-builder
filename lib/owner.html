@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event workbooks</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f8fafc; --fg: #0f172a; --muted: #64748b; --line: #e2e8f0; --link: #047857; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0f172a; --fg: #e2e8f0; --muted: #94a3b8; --line: #1e293b; --link: #34d399; } }
+    body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p { color: var(--muted); margin: 0 0 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    a { color: var(--link); font-weight: 600; text-decoration: none; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .join { background: #fff; color: #0f172a; border-radius: 20px; padding: 28px 20px 24px; margin: 0 0 32px; text-align: center; box-shadow: 0 4px 24px rgba(15,23,42,.18); }
+    .join h2 { font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0 0 4px; }
+    .join .sub { color: #475569; font-size: 18px; margin: 0 0 18px; }
+    #qr svg { width: min(78vw, 440px); height: auto; display: block; margin: 0 auto; }
+    #link { font: 700 clamp(15px, 2.6vw, 24px)/1.3 ui-monospace, Menlo, monospace; word-break: break-all; margin: 18px auto 14px; max-width: 640px; user-select: all; }
+    .join button { font: 600 15px system-ui, sans-serif; padding: 10px 16px; margin: 0 4px 6px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #0f172a; cursor: pointer; }
+    .join button.primary { background: #047857; border-color: #047857; color: #fff; }
+    .join details { margin-top: 12px; text-align: left; font-size: 14px; color: #475569; }
+    .join summary { cursor: pointer; text-align: center; }
+    .join label { display: block; margin: 10px 0 2px; font-weight: 600; }
+    .join input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font: 14px ui-monospace, Menlo, monospace; }
+    .join:fullscreen { display: flex; flex-direction: column; justify-content: center; border-radius: 0; box-shadow: none; padding: 3vh 4vw; }
+    .join:fullscreen #qr svg { width: min(72vh, 72vw); }
+    .join:fullscreen .controls, .join:fullscreen details { display: none; }
+    .join:fullscreen #link { font-size: clamp(18px, 3vw, 40px); max-width: 90vw; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="join" id="join">
+      <h2>Scan to join</h2>
+      <p class="sub">Point your phone camera at the code, or type the link</p>
+      <div id="qr" role="img" aria-label="QR code for the attendee link"></div>
+      <div id="link"></div>
+      <div class="controls">
+        <button class="primary" id="present">Show full screen</button>
+        <button id="copy">Copy link</button>
+      </div>
+      <details>
+        <summary>Change the link (the tunnel address changes each time you restart cloudflared)</summary>
+        <label for="base">Tunnel address</label>
+        <input id="base" spellcheck="false" autocomplete="off">
+        <label for="code">Event code</label>
+        <input id="code" spellcheck="false" autocomplete="off">
+      </details>
+    </section>
+    <h1>Event workbooks</h1>
+    <p>Saved by attendees with "Make my cards" or Save. Only visible on this laptop. Open one at a time.</p>
+    <table>
+      <thead><tr><th>Workbook</th><th>Attendee</th><th>Updated</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </main>
+  <script src="/owner/qrcode.js"></script>
+  <script>
+    // The server fills these in from the running tunnel and EVENT_CODE (nothing is committed here).
+    const LIVE = /*__OWNER_DEFAULTS__*/{};
+    const DEFAULTS = { base: LIVE.base || '', code: LIVE.code || '' };
+    const $ = (id) => document.getElementById(id);
+    let cfg = { ...DEFAULTS };
+    try {
+      const saved = JSON.parse(localStorage.getItem('eventLink') || '{}');
+      // Live values from the server win; saved ones only fill in what the server could not detect.
+      for (const k of ['base', 'code']) if (!cfg[k] && typeof saved[k] === 'string') cfg[k] = saved[k];
+    } catch {}
+    function attendeeLink() {
+      const base = cfg.base.trim().replace(/\/+$/, '');
+      return base + '/?e=' + encodeURIComponent(cfg.code.trim());
+    }
+    function renderJoin() {
+      if (!cfg.base.trim() || !cfg.code.trim()) {
+        $('qr').textContent = '';
+        $('link').textContent = 'Enter the tunnel address and event code below';
+        $('join').querySelector('details').open = true;
+        return;
+      }
+      const url = attendeeLink();
+      const qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
+      $('link').textContent = url;
+      try { localStorage.setItem('eventLink', JSON.stringify(cfg)); } catch {}
+    }
+    $('base').value = cfg.base; $('code').value = cfg.code;
+    for (const k of ['base', 'code']) $(k).addEventListener('input', (e) => { cfg[k] = e.target.value; if (cfg.base.trim() && cfg.code.trim()) renderJoin(); });
+    $('copy').addEventListener('click', async (e) => {
+      try { await navigator.clipboard.writeText(attendeeLink()); e.target.textContent = 'Copied'; } catch { e.target.textContent = 'Select the link and copy'; }
+      setTimeout(() => { e.target.textContent = 'Copy link'; }, 1800);
+    });
+    $('present').addEventListener('click', () => { const j = $('join'); if (j.requestFullscreen) j.requestFullscreen(); });
+    renderJoin();
+  </script>
+  <script>
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    fetch('/api/owner/workbooks').then((r) => r.json()).then(({ workbooks = [] }) => {
+      const rows = document.getElementById('rows');
+      if (!workbooks.length) { rows.innerHTML = '<tr><td colspan="3" class="muted">No event workbooks saved yet.</td></tr>'; return; }
+      rows.innerHTML = workbooks.map((w) => `<tr>
+        <td><a href="/?w=${encodeURIComponent(w.id)}" target="_blank" rel="noopener">${esc(w.title || 'Untitled')}</a></td>
+        <td>${esc(w.name || '—')}<div class="muted">${esc(w.attendee)}</div></td>
+        <td class="muted">${esc(new Date(w.updatedAt).toLocaleString())}</td>
+      </tr>`).join('');
+    }).catch(() => { document.getElementById('rows').innerHTML = '<tr><td colspan="3" class="muted">Could not load.</td></tr>'; });
+  </script>
+</body>
+</html>

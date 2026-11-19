@@ -1,6 +1,7 @@
 import { getDb } from '../../lib/db.js';
 import { HttpError, sanitizeData, sanitizeOwner, sanitizeTitle } from '../../lib/fields.js';
-import { bearerToken, json, readJson, route, tokenMatches } from '../../lib/http.js';
+import { assertSameOrigin, bearerToken, json, readJson, route, tokenMatches } from '../../lib/http.js';
+import { isOwner, writeAccess } from '../../lib/event.js';
 
 function workbookId(request) {
   const id = decodeURIComponent(new URL(request.url).pathname.split('/').pop() || '');
@@ -31,8 +32,11 @@ export const GET = route(async (request) => {
   });
 });
 
-// PUT /api/workbooks/:id — owner update, authorised by the edit token.
+// PUT /api/workbooks/:id — owner update, authorised by the edit token. The app owner on
+// 127.0.0.1 may edit any workbook; in event mode other callers also need the event cookie.
 export const PUT = route(async (request) => {
+  assertSameOrigin(request);
+  if (!writeAccess(request)) throw new HttpError(404, 'Workbook not found');
   const id = workbookId(request);
   const body = await readJson(request);
   const data = sanitizeData(body.data);
@@ -46,7 +50,7 @@ export const PUT = route(async (request) => {
   });
   const row = rows[0];
   if (!row) throw new HttpError(404, 'Workbook not found');
-  if (!tokenMatches(bearerToken(request), row.edit_token_hash)) {
+  if (!isOwner(request) && !tokenMatches(bearerToken(request), row.edit_token_hash)) {
     throw new HttpError(403, 'You do not have permission to edit this workbook');
   }
 

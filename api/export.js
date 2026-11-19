@@ -2,7 +2,8 @@ import { workbookBlocks } from '../lib/document.js';
 import { buildDocx } from '../lib/export-docx.js';
 import { buildPdf } from '../lib/export-pdf.js';
 import { HttpError, sanitizeData, sanitizeOwner, sanitizeTitle } from '../lib/fields.js';
-import { readJson, route } from '../lib/http.js';
+import { assertSameOrigin, readJson, route } from '../lib/http.js';
+import { writeAccess } from '../lib/event.js';
 
 const FORMATS = {
   docx: { build: buildDocx, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
@@ -10,12 +11,14 @@ const FORMATS = {
 };
 
 function filename(title, ext) {
-  const slug = title.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'Value-Prop-Workbook';
+  const slug = title.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'CrashTest-MVP-Workbook';
   return `${slug}-${new Date().toISOString().slice(0, 10)}.${ext}`;
 }
 
 // POST /api/export — render the current workbook (saved or not) as DOCX or PDF.
 export const POST = route(async (request) => {
+  assertSameOrigin(request);
+  if (!writeAccess(request)) throw new HttpError(404, 'Not found');
   const body = await readJson(request);
   const format = FORMATS[body.format];
   if (!format) throw new HttpError(400, 'Format must be docx or pdf');
