@@ -277,6 +277,7 @@
                 <div>
                     <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Workbooks</p>
                     <div id="wb-list" class="space-y-2.5 max-h-[40dvh] lg:max-h-none overflow-y-auto overscroll-contain" role="list" aria-label="Saved workbooks"></div>
+                    <button type="button" onclick="startNewWorkbook()" class="mt-2.5 w-full min-h-[44px] bg-white border border-slate-300 text-slate-800 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm"><i class="fas fa-plus mr-2 text-blue-500"></i>Start a new workbook</button>
                 </div>
 
                 <div class="h-px bg-slate-200"></div>
@@ -1788,11 +1789,19 @@
             toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
         }
 
+        function resetDraft() {
+            [...fields, 'current', 'dirty', 'saved_at', 'coach', 'coach_convs', 'coach_active'].forEach(key => store.remove(key));
+            location.href = location.pathname;
+        }
+
         function clearAll() {
-            if (confirm('Clear everything and start a new workbook? Saved workbooks stay available at their share links.')) {
-                [...fields, 'current', 'dirty', 'saved_at', 'coach', 'coach_convs', 'coach_active'].forEach(key => store.remove(key));
-                location.href = location.pathname;
-            }
+            if (confirm('Clear everything and start a new workbook? Saved workbooks stay available at their share links.')) resetDraft();
+        }
+
+        // A blank workbook. Saved workbooks stay in the list and at their share links; only an unsaved draft needs asking.
+        function startNewWorkbook() {
+            if (dirty && hasContent() && !confirm('You have unsaved changes. Start a new workbook and discard them?')) return;
+            resetDraft();
         }
 
         // --- Coach (local only): gstack office hours and CEO review over /api/coach (SSE) ---
