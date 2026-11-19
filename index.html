@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>CrashTest MVP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        /* Some tooltips sit past the right edge and gave the desktop page a sideways scrollbar. */
+        html, body { overflow-x: clip; }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
@@ -56,6 +59,8 @@
             resize: vertical;
             min-height: 100px;
         }
+        /* Workbook boxes grow with their text (see autosize), so they never scroll inside. */
+        main textarea { overflow: hidden; resize: none; }
 
         .glass-card {
             background: rgba(255, 255, 255, 0.8);
@@ -123,6 +128,17 @@
         body.coach-open #coach-tabs { right: 460px; }
         @media (max-width: 639px) { body.coach-open #coach-tabs { display: none; } }
         #coach-panel.open { transform: translateX(0); }
+        /* Small tooltip for icon buttons (hover or keyboard focus; on phones the visible label does the job). */
+        [data-tip] { position: relative; }
+        [data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; white-space: nowrap; background: #1e293b; color: #fff; font: 500 12px/1 'Inter', sans-serif; padding: 8px 10px; border-radius: 8px; box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2); opacity: 0; transform: translateY(-2px); pointer-events: none; transition: opacity 0.15s, transform 0.15s; }
+        [data-tip].tip-right::after { left: auto; right: 0; }
+        [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: none; }
+        /* Closed, the panel sits just off screen and its shadow leaked a grey band down the right edge. */
+        #coach-panel:not(.open) { box-shadow: none; visibility: hidden; transition: transform 0.25s ease, visibility 0s 0.25s; }
+        /* Before anything is pasted the brain-dump box takes the whole panel instead of a blank chat log. */
+        #coach-panel.dump-first #coach-log { display: none; }
+        #coach-panel.dump-first #coach-dump { flex: 1; display: flex; flex-direction: column; overflow-y: auto; border-top: 0; }
+        #coach-panel.dump-first #coach-dump-text { flex: 1; min-height: 160px; }
         .coach-md code { background: #f1f5f9; padding: 0 4px; border-radius: 4px; font-size: 0.85em; }
 
         .status-ok { background-color: #10b981; }
@@ -130,8 +146,9 @@
         .status-err { background-color: #ef4444; }
 
         /* Graph Styles */
+        /* Vertical swipes over the map scroll the page; only the marker itself is dragged (see initGraph). */
         #need_graph {
-            touch-action: none;
+            touch-action: pan-y;
         }
         .quadrant-label {
             position: absolute;
@@ -141,18 +158,81 @@
             text-transform: uppercase;
             pointer-events: none;
         }
+        /* The marker is 24px; a 48px invisible halo makes it easy to grab with a thumb. */
+        #graph_marker { touch-action: none; }
+        #graph_marker::after { content: ''; position: absolute; inset: -12px; border-radius: 9999px; }
+
+        /* ===== Page shell (all widths) =====
+           Brand, then a sticky strip: menu button + section chips. The save/share/workbooks/export/coach
+           controls live in the menu: a bottom sheet on phones, a half-width drawer from the left on
+           laptops. In event mode on a phone, Brain dump and Make my cards also sit in a bottom dock. */
+        /* One gutter for the brand, the menu strip and the page: 16px on phones (the reference), then the same
+           steps as the page padding. The content column is 72rem wide and centred, so everything lines up. */
+        :root { --gutter: 16px; --edge: max(var(--gutter), calc((100% - 72rem) / 2 + var(--gutter))); }
+        @media (min-width: 768px) { :root { --gutter: 32px; } }
+        @media (min-width: 1024px) { :root { --gutter: 48px; } }
+        #menu-backdrop, .event-dock { display: none; }
+        #side { display: contents; }
+        #side-brand { order: 1; padding: 16px var(--edge) 12px; background: #fff; }
+        #side-nav { order: 2; padding-left: var(--edge); position: sticky; top: 0; z-index: 60; display: flex; align-items: stretch; margin: 0; background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+        #menu-btn { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex: 0 0 auto; min-height: 48px; padding: 0 16px 0 0; color: #334155; border-right: 1px solid #e2e8f0; font-size: 18px; }
+        #menu-btn:hover { color: #1d4ed8; }
+        .nav-scroll { display: flex; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .nav-scroll::-webkit-scrollbar { display: none; }
+        .nav-scroll .nav-link { flex: 0 0 auto; min-height: 48px; padding: 0 14px; font-size: 14px; white-space: nowrap; border-bottom: 3px solid transparent; }
+        .nav-scroll .nav-link .w-5 { width: auto; }
+        .nav-scroll .nav-link.active { background: transparent; border-right: 0; border-bottom-color: #2563eb; }
+        #side-actions { order: 3; position: fixed; left: 0; right: 0; bottom: 0; z-index: 220; max-height: 88dvh; overflow-y: auto; border-radius: 20px 20px 0 0; border-top: 0; box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.3); padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); transform: translateY(105%); visibility: hidden; transition: transform 0.22s ease, visibility 0s 0.22s; }
+        body.menu-open #side-actions { transform: none; visibility: visible; transition: transform 0.22s ease; }
+        #side-actions button, #side-actions a { min-height: 44px; }
+        #menu-backdrop { position: fixed; inset: 0; z-index: 215; background: rgba(15, 23, 42, 0.5); }
+        body.menu-open #menu-backdrop { display: block; }
+        main#main { order: 4; }
+        section[id] { scroll-margin-top: 64px; }
+        /* Laptops: the menu opens from the left at half the screen, so the workbook cards have room. */
+        @media (min-width: 1024px) {
+            #side-brand { padding-top: 20px; padding-bottom: 14px; }
+            #side-actions { left: 0; right: auto; top: 0; bottom: 0; width: 50vw; min-width: 520px; max-width: 800px; max-height: none; border-radius: 0 20px 20px 0; padding: 24px 28px; box-shadow: 12px 0 40px rgba(15, 23, 42, 0.3); transform: translateX(-105%); }
+        }
+        @media (max-width: 1023px) {
+            .event-mode main#main { padding-bottom: 6rem; }
+            .event-mode .event-dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e2e8f0; box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.08); }
+            .event-dock button { min-height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+            .event-mode #coach-tabs { display: none; }
+            #toast { left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); text-align: center; padding: 12px 16px; }
+            .event-mode #toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
+            /* iOS zooms the page when a field under 16px gets focus; keep every field at 16px. */
+            input, textarea, select { font-size: 16px !important; }
+            textarea { resize: none; }
+        }
+        /* Coach tab on a phone: a bottom-right button, not a vertical pill over the text. */
+        @media (max-width: 639px) {
+            #coach-tabs { top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); right: 12px; transform: none; flex-direction: row; }
+            #coach-tabs button { flex-direction: row; border-radius: 12px; min-height: 44px; padding: 10px 14px; }
+            #coach-tabs span { writing-mode: horizontal-tb !important; font-size: 13px; }
+            #coach-panel { height: 100dvh; }
+            #cards-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 -16px; padding: 0 16px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            #cards-grid::-webkit-scrollbar { display: none; }
+            #cards-grid > .glass-card { flex: 0 0 86%; scroll-snap-align: center; min-width: 0; }
+            #cards-dots { display: flex; }
+        }
+        #cards-dots { display: none; justify-content: center; gap: 8px; margin: 4px 0 0; }
+        #cards-dots i { width: 8px; height: 8px; border-radius: 9999px; background: #cbd5e1; transition: background 0.2s, transform 0.2s; }
+        #cards-dots i.on { background: #7c3aed; transform: scale(1.25); }
     </style>
 </head>
 <body class="text-slate-800 ai-off coach-off">
 
-    <div class="flex flex-col lg:flex-row min-h-screen">
+    <div class="flex flex-col min-h-screen">
         <!-- Sidebar -->
-        <aside class="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 relative lg:fixed h-auto lg:h-full lg:overflow-y-auto no-print flex flex-col z-20">
-            <div class="p-6">
+        <aside id="side" class="no-print">
+            <div id="side-brand">
                 <h1 class="text-xl font-bold text-blue-600">CrashTest MVP</h1>
                 <p class="text-xs text-slate-500 mt-1">Interactive Framework Guide</p>
             </div>
-            <nav class="mt-4 flex-1">
+            <nav id="side-nav" aria-label="Workbook sections">
+                <button type="button" id="menu-btn" onclick="toggleMenu()" aria-label="Menu: save, share, export" aria-expanded="false" aria-controls="side-actions"><i class="fas fa-bars"></i><span class="hidden lg:inline text-sm font-semibold">Menu</span></button>
+                <div class="nav-scroll">
                 <a href="#who" class="nav-link flex items-center px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-users w-5"></i> <span class="ml-3">Defining the "Who"</span>
                 </a>
@@ -171,25 +251,36 @@
                 <a href="#cards" class="nav-link flex items-center px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-images w-5"></i> <span class="ml-3">Share cards</span>
                 </a>
+                </div>
             </nav>
+            <div id="menu-backdrop" onclick="toggleMenu(false)"></div>
 
             <!-- Workbook Storage, Sharing & Export -->
-            <div class="p-6 bg-slate-50 border-t border-slate-200 space-y-3">
+            <div id="side-actions" class="p-6 bg-slate-50 border-t border-slate-200 space-y-3" role="dialog" aria-label="Save, share and export">
+                <div class="flex items-center justify-between -mt-1">
+                    <p class="text-sm font-bold text-slate-800">Menu</p>
+                    <button type="button" onclick="toggleMenu(false)" class="w-11 h-11 -mr-2 flex items-center justify-center text-slate-500" aria-label="Close menu"><i class="fas fa-times"></i></button>
+                </div>
                 <!-- Status -->
                 <div class="flex items-center justify-between text-[11px] text-slate-500">
                     <span id="save-status-text" class="truncate pr-2">Draft (not saved)</span>
                     <span id="save-dot" class="status-dot status-warn flex-shrink-0"></span>
                 </div>
 
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <button id="save-btn" onclick="saveToCloud()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center text-xs font-bold shadow-sm disabled:opacity-60">
                     <i class="fas fa-cloud-arrow-up mr-2"></i><span id="save-btn-label">Save workbook</span>
                 </button>
                 <button onclick="copyShareLink()" class="w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center text-xs font-bold shadow-sm">
                     <i class="fas fa-link mr-2 text-blue-500"></i>Copy share link
                 </button>
-                <button id="edit-details-btn" onclick="openDetailsModal()" class="hidden w-full text-slate-500 text-[11px] hover:text-slate-800">
-                    Edit workbook details
-                </button>
+                </div>
+                <!-- Saved workbooks on this device: each is a card with its title, five card slots and a Load button -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Workbooks</p>
+                    <div id="wb-list" class="space-y-2.5 max-h-[40dvh] lg:max-h-none overflow-y-auto overscroll-contain" role="list" aria-label="Saved workbooks"></div>
+                    <button type="button" onclick="startNewWorkbook()" class="mt-2.5 w-full min-h-[44px] bg-white border border-slate-300 text-slate-800 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm"><i class="fas fa-plus mr-2 text-blue-500"></i>Start a new workbook</button>
+                </div>
 
                 <div class="h-px bg-slate-200"></div>
 
@@ -229,10 +320,10 @@
                 </button>
 
                 <!-- Coach: gstack office hours + CEO review via the local Claude login -->
-                <div class="coach-feature space-y-2">
-                    <div class="h-px bg-slate-200"></div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Coach <span class="event-hide normal-case font-normal">(local, your Claude plan)</span></p>
-                    <button onclick="makeMyCards()" class="event-only w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 text-sm font-bold shadow-sm">
+                <div class="coach-feature space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
+                    <div class="h-px bg-slate-200 lg:col-span-2"></div>
+                    <p class="lg:col-span-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Coach <span class="event-hide normal-case font-normal">(local, your Claude plan)</span></p>
+                    <button onclick="makeMyCards()" class="event-only lg:col-span-2 w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 text-sm font-bold shadow-sm">
                         <i class="fas fa-images mr-2"></i>Make my cards
                     </button>
                     <button onclick="openCoach('office-hours', 'guided')" class="event-hide w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 flex items-center justify-center text-xs font-bold shadow-sm">
@@ -252,11 +343,18 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 ml-0 lg:ml-64 p-4 md:p-8 lg:p-12 w-full">
-            <header class="mb-12">
-                <h2 class="text-3xl font-bold text-slate-900">CrashTest MVP</h2>
-                <p class="text-slate-500 max-w-2xl mt-2">Use this space to define, evaluate, and build a product people actually want.</p>
+        <main id="main" class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8 lg:p-12 min-w-0">
+            <header class="mb-8">
+                <p class="text-slate-500 max-w-2xl">Use this space to define, evaluate, and build a product people actually want.</p>
             </header>
+
+            <!-- After the coach fills fields: say so on the workbook itself -->
+            <div id="fill-banner" class="coach-feature no-print hidden sticky top-[49px] z-50 mb-6 flex items-center gap-3 bg-emerald-600 text-white rounded-xl pl-4 pr-2 py-2 shadow-lg" role="status">
+                <i class="fas fa-circle-check"></i>
+                <p id="fill-banner-text" class="flex-1 text-sm font-semibold leading-snug"></p>
+                <button type="button" onclick="reviewFilled()" class="min-h-[40px] px-3 rounded-lg bg-white text-emerald-700 text-sm font-bold whitespace-nowrap">Review</button>
+                <button type="button" onclick="dismissFillBanner()" class="w-10 h-10 flex items-center justify-center text-white/80 hover:text-white" aria-label="Dismiss"><i class="fas fa-times"></i></button>
+            </div>
 
             <!-- Shown when viewing someone else's shared workbook -->
             <div id="shared-banner" class="hidden no-print -mt-6 mb-12 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-xl px-5 py-4">
@@ -641,21 +739,21 @@
                         Share cards
                     </h3>
                 </div>
-                <p class="text-slate-500 text-sm mb-6 max-w-2xl">Five cards for LinkedIn and Threads. Edit the wording under each card; the preview updates as you type. Card 3 follows your needs map.</p>
+                <p class="text-slate-500 text-sm mb-5 sm:mb-6 max-w-2xl">Five cards for LinkedIn and Threads. Edit the wording under each card; the preview updates as you type. Card 3 follows your needs map.<span class="sm:hidden"> Swipe sideways for all five.</span></p>
 
-                <div class="flex flex-col sm:flex-row flex-wrap gap-3 mb-8">
-                    <button type="button" onclick="draftCardsFromWorkbook()" class="bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg hover:bg-slate-50 text-sm font-bold shadow-sm flex items-center justify-center">
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mb-6 sm:mb-8">
+                    <button type="button" onclick="draftCardsFromWorkbook()" class="col-span-2 bg-white border border-slate-300 text-slate-700 px-4 py-3 sm:py-2.5 rounded-lg hover:bg-slate-50 text-sm font-bold shadow-sm flex items-center justify-center">
                         <i class="fas fa-wand-magic-sparkles mr-2 text-violet-500"></i> Draft from my workbook
                     </button>
-                    <button type="button" id="cards-linkedin-btn" onclick="exportCards('linkedin')" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
+                    <button type="button" id="cards-linkedin-btn" onclick="exportCards('linkedin')" class="bg-blue-600 text-white px-2 sm:px-4 py-3 sm:py-2.5 rounded-lg hover:bg-blue-700 text-[13px] sm:text-sm whitespace-nowrap font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
                         <i class="fab fa-linkedin mr-2"></i> LinkedIn (5 cards)
                     </button>
-                    <button type="button" id="cards-threads-btn" onclick="exportCards('threads')" class="bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-black text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
+                    <button type="button" id="cards-threads-btn" onclick="exportCards('threads')" class="bg-slate-900 text-white px-2 sm:px-4 py-3 sm:py-2.5 rounded-lg hover:bg-black text-[13px] sm:text-sm whitespace-nowrap font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
                         <i class="fas fa-at mr-2"></i> Threads (2 images)
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-6">
                     <div class="glass-card p-4 rounded-xl shadow-sm">
                         <canvas id="card_canvas_1" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
                         <label for="card_who" class="block text-xs font-bold text-slate-500 uppercase mt-3">1 · Who it's for</label>
@@ -691,6 +789,7 @@
                         <p id="card_warn_5" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
                     </div>
                 </div>
+                <div id="cards-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
             </section>
 
             <!-- Final AI Summary -->
@@ -779,22 +878,28 @@
 
     <!-- Coach panel (local only) -->
     <aside id="coach-panel" class="coach-feature no-print fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white border-l border-slate-200 shadow-2xl z-[190] flex flex-col" aria-label="Coach" aria-hidden="true">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-            <div class="min-w-0">
-                <h4 id="coach-title" class="text-base font-bold text-slate-800 truncate">Coach</h4>
+        <div class="pl-2 pr-2 py-1.5 sm:py-3 border-b border-slate-100 flex flex-wrap sm:flex-nowrap items-center gap-x-2 bg-slate-50">
+            <!-- Back, not close: the chat is kept and the workbook is where the answers land -->
+            <button type="button" onclick="backToWorkbook()" data-tip="Go back to the workbook" aria-label="Go back to the workbook" class="tip-below min-h-[44px] pl-3 pr-4 -ml-0.5 flex items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-200/60"><i class="fas fa-arrow-left"></i><span>Workbook</span></button>
+            <div class="order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 px-2 sm:px-1 pb-1.5 sm:pb-0">
+                <h4 id="coach-title" class="text-sm sm:text-base font-bold text-slate-800 truncate">Coach</h4>
                 <p id="coach-subtitle" class="text-[11px] text-slate-500 truncate"></p>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <button id="coach-undo" onclick="undoCoachFill()" class="hidden text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 hover:bg-amber-100">Undo AI fill</button>
-                <button onclick="resetCoach()" title="Start over" class="text-slate-400 hover:text-slate-600 px-1"><i class="fas fa-rotate-left"></i></button>
-                <button onclick="closeCoach()" title="Close" class="text-slate-400 hover:text-slate-600 px-1"><i class="fas fa-times"></i></button>
+            <div class="flex items-center gap-1 flex-shrink-0 ml-auto sm:ml-0">
+                <button id="coach-undo" onclick="undoCoachFill()" class="hidden text-[11px] sm:text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 sm:px-3 py-2 whitespace-nowrap hover:bg-amber-100">Undo AI fill</button>
+                <button onclick="resetCoach()" data-tip="Start over (clears this chat)" aria-label="Start over: clears this chat" class="tip-below tip-right w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600"><i class="fas fa-rotate-left"></i></button>
             </div>
         </div>
+        <p class="px-4 py-2 text-xs text-slate-600 bg-white border-b border-slate-100 flex items-start gap-2"><i class="fas fa-check-circle text-emerald-600 mt-0.5"></i><span>This chat is saved while you are here. Go back to the workbook any time, then reopen the coach to pick up where you left off.</span></p>
         <div id="coach-log" class="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm"></div>
         <div id="coach-status" class="hidden px-5 py-2 text-[11px] text-slate-500 border-t border-slate-100 loading-shimmer"></div>
+        <!-- Event mode: once the coach has filled the workbook, the next step is right here -->
+        <div id="coach-make-bar" class="hidden p-3 border-t border-emerald-100 bg-emerald-50">
+            <button type="button" onclick="makeMyCards()" class="w-full min-h-[48px] bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60"><i class="fas fa-images mr-2"></i>Make my cards</button>
+        </div>
         <!-- Brain dump: first message -->
         <div id="coach-dump" class="hidden p-4 border-t border-slate-100 space-y-2">
-            <p class="event-only text-[11px] text-slate-500 leading-snug bg-slate-50 border border-slate-200 rounded-lg p-2.5">CrashTest MVP's coach runs on the organiser's laptop and Anthropic's API, so your notes and workbook pass through both. Your coach conversation is kept on the organiser's laptop for this event, and when you press Make my cards or Save, your workbook is saved there too and the organiser can read it. Please don't paste anything confidential.</p>
+            <p class="event-only text-xs text-slate-600 leading-snug bg-slate-50 border border-slate-200 rounded-lg p-2.5">CrashTest MVP's coach runs on the organiser's laptop and Anthropic's API, so your notes and workbook pass through both. Your coach conversation is kept on the organiser's laptop for this event, and when you press Make my cards or Save, your workbook is saved there too and the organiser can read it. Please don't paste anything confidential.</p>
             <textarea id="coach-dump-text" class="w-full p-3 border border-slate-200 rounded-lg text-sm min-h-[220px] focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Paste anything: notes, a pitch draft, customer quotes, an email to a cofounder. The coach maps it into the workbook and tells you what's still weak."></textarea>
             <button id="coach-dump-send" onclick="sendBrainDump()" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg hover:bg-emerald-700 text-sm font-bold disabled:opacity-60">Fill my workbook</button>
         </div>
@@ -804,6 +909,12 @@
             <button id="coach-send" type="submit" class="bg-slate-900 text-white px-4 rounded-lg hover:bg-black text-sm font-semibold disabled:opacity-60">Send</button>
         </form>
     </aside>
+
+    <!-- Event mode on a phone: the two actions an attendee needs stay one tap away -->
+    <div id="event-dock" class="event-dock no-print">
+        <button type="button" onclick="openCoach('office-hours', 'braindump')" class="flex-1 bg-white border border-slate-300 text-slate-800"><i class="fas fa-paste text-emerald-600"></i>Brain dump</button>
+        <button type="button" id="dock-make" onclick="makeMyCards()" class="flex-1 bg-emerald-600 text-white shadow-sm"><i class="fas fa-images"></i>Make my cards</button>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl opacity-0 transition-opacity pointer-events-none z-[250]">
@@ -875,6 +986,21 @@
             }
         });
 
+        // Workbook text boxes grow to fit what is in them, so nobody scrolls inside a small box.
+        function autosize(el) {
+            if (!el.offsetParent) return;   // hidden boxes measure 0
+            const y = window.scrollY;
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight + (el.offsetHeight - el.clientHeight)) + 'px';
+            if (window.scrollY !== y) window.scrollTo(0, y);
+        }
+        const autosizeAll = () => document.querySelectorAll('main textarea').forEach(autosize);
+        document.addEventListener('input', (e) => { if (e.target.matches?.('main textarea')) autosize(e.target); });
+        let autosizeTimer;
+        window.addEventListener('resize', () => { clearTimeout(autosizeTimer); autosizeTimer = setTimeout(autosizeAll, 120); });
+        window.addEventListener('load', autosizeAll);
+        document.fonts?.ready.then(autosizeAll);
+
         function loadDraft() {
             INPUT_FIELDS.forEach(field => {
                 const val = store.get(field);
@@ -882,6 +1008,7 @@
                 if (el && val !== null) el.value = val;
             });
             graph = { x: parseFloat(store.get('graph_x', 50)), y: parseFloat(store.get('graph_y', 50)) };
+            autosizeAll();
         }
 
         function persistDraft() {
@@ -909,6 +1036,7 @@
             });
             setMarker(parseFloat(data.graph_x ?? 50), parseFloat(data.graph_y ?? 50));
             calculateRatio();
+            autosizeAll();
             persistDraft();
             if (typeof cardsChanged === 'function') cardsChanged();
         }
@@ -986,8 +1114,10 @@
             document.addEventListener('mousemove', (e) => { if (isDragging) move(e); });
             document.addEventListener('mouseup', endDrag);
 
-            // Touch - drag the marker on mobile
-            graphEl.addEventListener('touchstart', startDrag, { passive: false });
+            // Touch - drag the marker on mobile. A swipe that starts anywhere else scrolls the page
+            // (it used to move the marker); a tap on the map still places it through the mouse events
+            // the browser sends after a tap.
+            graphEl.addEventListener('touchstart', (e) => { if (e.target.closest('#graph_marker')) startDrag(e); }, { passive: false });
             document.addEventListener('touchmove', (e) => { if (isDragging) move(e); }, { passive: false });
             document.addEventListener('touchend', endDrag);
         }
@@ -1041,7 +1171,6 @@
             document.getElementById('save-dot').className = `status-dot ${dot} flex-shrink-0`;
             document.getElementById('save-btn').disabled = saving;
             document.getElementById('save-btn-label').textContent = current && !owner ? 'Save my own copy' : 'Save workbook';
-            document.getElementById('edit-details-btn').classList.toggle('hidden', !owner);
 
             const viewing = !!current && !owner;
             document.getElementById('shared-banner').classList.toggle('hidden', !viewing);
@@ -1090,7 +1219,19 @@
 
         // Saves to the database. Opens the details form first when it needs a title or name.
         // Event mode: save this workbook for the organiser, then show the share cards.
+        let makingCards = false;
         async function makeMyCards() {
+            if (makingCards) return;   // a double tap must not save the workbook twice
+            makingCards = true;
+            document.querySelectorAll('[onclick="makeMyCards()"]').forEach((b) => { b.disabled = true; b.classList.add('opacity-60'); });
+            try {
+                await makeMyCardsOnce();
+            } finally {
+                makingCards = false;
+                document.querySelectorAll('[onclick="makeMyCards()"]').forEach((b) => { b.disabled = false; b.classList.remove('opacity-60'); });
+            }
+        }
+        async function makeMyCardsOnce() {
             const cardIds = ['card_who', 'card_pain', 'card_need', 'card_before', 'card_after', 'card_pitch'];
             // One brain-dump turn often leaves some card fields empty; draft only those from the workbook.
             if (cardIds.some(id => !document.getElementById(id)?.value.trim())) draftCardsFromWorkbook();
@@ -1101,7 +1242,11 @@
         }
 
         async function saveToCloud() {
-            if (isOwner() && profile.name) return persistToCloud(current.title);
+            if (isOwner() && profile.name) {
+                const saved = await persistToCloud(current.title);
+                if (saved) backToMenu(); else returnToMenu = false;
+                return saved;
+            }
             return openDetailsModal();
         }
 
@@ -1134,6 +1279,7 @@
                 saving = false;
                 setDirty(false);
                 showToast(owner ? 'Workbook saved.' : 'Workbook saved. Your share link is ready.');
+                rememberWorkbook();
                 return true;
             } catch (err) {
                 saving = false;
@@ -1190,6 +1336,7 @@
             document.getElementById('details-modal').style.display = 'none';
             if (detailsResolver) detailsResolver(result);
             detailsResolver = null;
+            backToMenu();
         }
 
         function showDetailsError(msg) {
@@ -1513,6 +1660,145 @@
             document.getElementById('modal-content').replaceChildren(p);
         }
 
+        // --- Workbook library: saved workbooks on this device, shown as cards in the menu ---
+        const LIBRARY_MAX = 8;
+        const getLibrary = () => { const l = store.getJson('library2', []); return Array.isArray(l) ? l : []; };
+        function upsertLibrary(entry) {
+            const lib = getLibrary().filter((w) => w.id !== entry.id);
+            lib.unshift(entry);
+            store.setJson('library2', lib.slice(0, LIBRARY_MAX));
+        }
+        // Called after every successful save: remember the title and a thumbnail of each written card.
+        async function rememberWorkbook() {
+            if (!current) return;
+            try { await window.renderCards(); } catch (e) {}
+            upsertLibrary({ id: current.id, title: current.title, updatedAt: savedAt || new Date().toISOString(), thumbs: window.cardThumbs ? window.cardThumbs() : [] });
+            renderLibrary();
+        }
+        async function paintThumb(dataUrl, canvas) {
+            try {
+                const bin = atob(dataUrl.split(',')[1]);
+                const bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+                const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+                canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            } catch (e) { canvas.classList.add('bg-slate-100'); }
+        }
+        function wbEl(tag, cls, text) {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text !== undefined) e.textContent = text;
+            return e;
+        }
+        function renderLibrary() {
+            const list = document.getElementById('wb-list');
+            if (!list) return;
+            const keep = list.scrollTop;
+            const owner = isOwner();
+            const live = window.cardThumbs ? window.cardThumbs() : [];
+            const lib = getLibrary();
+            if (owner && !lib.some((w) => w.id === current.id)) { upsertLibrary({ id: current.id, title: current.title, updatedAt: savedAt, thumbs: live }); lib.unshift({ id: current.id, title: current.title, updatedAt: savedAt, thumbs: live }); }
+            // The open workbook first (a draft shows as "Untitled draft"), then the saved ones.
+            const items = [{ id: current?.id || null, title: current?.title || 'Untitled draft', updatedAt: owner ? savedAt : null, thumbs: live, open: true }];
+            lib.filter((w) => w.id !== current?.id).forEach((w) => items.push({ ...w, open: false }));
+            list.replaceChildren(...items.map((w) => {
+                const card = wbEl('div', `rounded-xl border bg-white p-3 space-y-2.5 ${w.open ? 'border-blue-300 ring-1 ring-blue-100' : 'border-slate-200'}`);
+                card.setAttribute('role', 'listitem');
+                // The open workbook's title is the way to edit its details (name, owner, organisation).
+                const editable = w.open && (owner || !current);
+                if (editable) {
+                    const t = wbEl('button', 'max-w-full min-h-[44px] -my-1 flex items-center gap-2 text-left text-sm font-bold text-slate-900 hover:text-blue-700');
+                    t.type = 'button';
+                    t.setAttribute('data-wb-edit', '');
+                    t.setAttribute('aria-label', `Edit workbook details: ${w.title}`);
+                    t.append(wbEl('span', 'truncate min-w-0', w.title), wbEl('i', 'fas fa-pen text-[11px] text-slate-400 flex-shrink-0'));
+                    t.onclick = () => openDetailsModal();
+                    card.append(t);
+                } else {
+                    card.append(wbEl('p', 'text-sm font-bold text-slate-900 truncate', w.title));
+                }
+                const slots = wbEl('div', 'grid grid-cols-5 gap-1.5');
+                for (let i = 0; i < 5; i++) {
+                    const src = (w.thumbs || [])[i];
+                    if (src) {
+                        // A canvas, not an <img>: the CSP has no img-src for data: URLs.
+                        const thumb = wbEl('canvas', 'w-full h-auto rounded-md border border-slate-200');
+                        thumb.width = 300; thumb.height = 375;
+                        thumb.setAttribute('role', 'img'); thumb.setAttribute('aria-label', `Card ${i + 1}`);
+                        paintThumb(src, thumb);
+                        slots.append(thumb);
+                    } else {
+                        const empty = wbEl('div', 'w-full aspect-[4/5] rounded-md border-2 border-dashed border-slate-300 bg-slate-50');
+                        empty.setAttribute('role', 'img'); empty.setAttribute('aria-label', `Card ${i + 1} not written yet`);
+                        slots.append(empty);
+                    }
+                }
+                card.append(slots);
+                if (w.open) {
+                    card.append(wbEl('p', 'text-xs font-semibold text-blue-600', w.id ? `Open now${w.updatedAt ? ' · saved ' + formatSavedTime(w.updatedAt) : ''}` : 'Open now · not saved yet'));
+                } else {
+                    const load = wbEl('button', 'w-full min-h-[44px] bg-white border border-slate-300 text-slate-800 rounded-lg text-xs font-bold hover:bg-slate-50 flex items-center justify-center gap-2');
+                    load.type = 'button';
+                    load.append(wbEl('i', 'fas fa-folder-open text-blue-500'), document.createTextNode('Load workbook'));
+                    load.setAttribute('aria-label', `Load workbook: ${w.title}`);
+                    load.onclick = () => loadWorkbook(w.id);
+                    card.append(load);
+                }
+                return card;
+            }));
+            list.scrollTop = keep;
+        }
+        async function loadWorkbook(id) {
+            toggleMenu(false);
+            await openShared(id);
+            if (current?.id !== id) return;   // cancelled, or it could not be opened (openShared already said why)
+            syncUrl();
+            updateSaveUI();
+            renderLibrary();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast(`Opened "${current.title}".`);
+        }
+        let libraryTimer;
+        document.addEventListener('cards-rendered', () => { clearTimeout(libraryTimer); libraryTimer = setTimeout(renderLibrary, 250); });
+
+        // Phones: save/share/export live in a bottom sheet behind the menu button.
+        function toggleMenu(force) {
+            const open = force === undefined ? !document.body.classList.contains('menu-open') : force;
+            document.body.classList.toggle('menu-open', open);
+            if (open) renderLibrary();
+            document.getElementById('menu-btn')?.setAttribute('aria-expanded', String(open));
+        }
+        // A save started from the menu on a phone comes back to the menu afterwards, so the new workbook card is in view.
+        let returnToMenu = false;
+        const onPhone = () => window.matchMedia('(max-width: 1023px)').matches;
+        function backToMenu() { const go = returnToMenu && onPhone(); returnToMenu = false; if (go) setTimeout(() => toggleMenu(true), 150); }
+        document.getElementById('side-actions').addEventListener('click', (e) => {
+            const btn = e.target.closest('a, button');
+            if (!btn) return;
+            returnToMenu = !!btn.closest('#save-btn, [data-wb-edit]');
+            toggleMenu(false);
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false); });
+
+        // Section strip: mark the section on screen (a sticky strip on phones, the sidebar on laptops).
+        (function () {
+            if (!('IntersectionObserver' in window)) return;
+            const links = [...document.querySelectorAll('#side-nav .nav-link')];
+            const byId = new Map(links.map((a) => [a.getAttribute('href').slice(1), a]));
+            const strip = document.querySelector('.nav-scroll');
+            const io = new IntersectionObserver((entries) => {
+                for (const en of entries) {
+                    if (!en.isIntersecting) continue;
+                    const a = byId.get(en.target.id);
+                    links.forEach((l) => l.classList.toggle('active', l === a));
+                    if (a && strip && strip.scrollWidth > strip.clientWidth) {
+                        const left = a.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft - 16;
+                        strip.scrollTo({ left, behavior: 'smooth' });
+                    }
+                }
+            }, { rootMargin: '-20% 0px -70% 0px' });
+            byId.forEach((_, id) => { const sec = document.getElementById(id); if (sec) io.observe(sec); });
+        })();
+
         let toastTimer;
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -1522,11 +1808,19 @@
             toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
         }
 
+        function resetDraft() {
+            [...fields, 'current', 'dirty', 'saved_at', 'coach', 'coach_convs', 'coach_active'].forEach(key => store.remove(key));
+            location.href = location.pathname;
+        }
+
         function clearAll() {
-            if (confirm('Clear everything and start a new workbook? Saved workbooks stay available at their share links.')) {
-                [...fields, 'current', 'dirty', 'saved_at', 'coach', 'coach_convs', 'coach_active'].forEach(key => store.remove(key));
-                location.href = location.pathname;
-            }
+            if (confirm('Clear everything and start a new workbook? Saved workbooks stay available at their share links.')) resetDraft();
+        }
+
+        // A blank workbook. Saved workbooks stay in the list and at their share links; only an unsaved draft needs asking.
+        function startNewWorkbook() {
+            if (dirty && hasContent() && !confirm('You have unsaved changes. Start a new workbook and discard them?')) return;
+            resetDraft();
         }
 
         // --- Coach (local only): gstack office hours and CEO review over /api/coach (SSE) ---
@@ -1619,6 +1913,7 @@
             panel.classList.add('open');
             panel.setAttribute('aria-hidden', 'false');
             document.body.classList.add('coach-open');
+            updateFillBanner();
             rt(key).unread = false;
             updateCoachChrome();
             updateCoachTabs();
@@ -1636,6 +1931,37 @@
             panel.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('coach-open');
             updateCoachTabs();
+            updateFillBanner();
+        }
+
+        // Fields the coach filled that the person has not looked at yet; drives the banner on the workbook.
+        const unseenFilled = new Set();
+        const fieldBox = (id) => {
+            const el = document.getElementById(id === 'graph_x' || id === 'graph_y' ? 'need_graph' : id);
+            return el && (el.type === 'range' ? el.closest('div') : el);
+        };
+        function updateFillBanner() {
+            const banner = document.getElementById('fill-banner');
+            const n = unseenFilled.size;
+            banner.classList.toggle('hidden', !n || coachPanelOpen());
+            if (n) document.getElementById('fill-banner-text').textContent = `The coach filled ${n} field${n === 1 ? '' : 's'} in your workbook. Check they say what you mean.`;
+        }
+        function dismissFillBanner() { unseenFilled.clear(); updateFillBanner(); }
+        // Scroll to the first field the coach filled and light them all up for a few seconds.
+        function reviewFilled(ids = [...unseenFilled]) {
+            const boxes = [...new Set(ids)].map(fieldBox).filter(Boolean);
+            unseenFilled.clear();
+            updateFillBanner();
+            if (!boxes.length) return;
+            boxes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            boxes.forEach((b) => { b.classList.add('coach-filled'); setTimeout(() => b.classList.remove('coach-filled'), 4500); });
+        }
+        // The back button: keep the chat, return to the workbook, and show what the coach changed.
+        function backToWorkbook(ids) {
+            const had = Array.isArray(ids) ? ids : [...unseenFilled];
+            closeCoach();
+            if (had.length) reviewFilled(had);
+            showToast(had.length ? `Showing the ${had.length} field${had.length === 1 ? '' : 's'} the coach filled. Your chat is saved.` : 'Your chat is saved. Reopen the coach any time.');
         }
 
         // Start the visible conversation over. Other conversations are untouched.
@@ -1643,7 +1969,7 @@
             const key = coachActive;
             if (!coachConvs[key]) return;
             const r = rt(key);
-            if (r.busy && !confirm('Stop this coach conversation and start over?')) return;
+            if (!confirm(r.busy ? 'Stop this coach conversation and start over?' : 'Start over? This clears this chat. Your workbook stays as it is.')) return;
             r.abort?.abort();
             r.el?.remove();
             delete coachRt[key];
@@ -1704,6 +2030,8 @@
             document.getElementById('coach-input').disabled = r.busy;
             document.getElementById('coach-dump-send').disabled = r.busy;
             document.getElementById('coach-undo').classList.toggle('hidden', !Object.keys(conv.undo || {}).length);
+            document.getElementById('coach-panel').classList.toggle('dump-first', dumpFirst);
+            document.getElementById('coach-make-bar').classList.toggle('hidden', !(document.body.classList.contains('event-mode') && Object.keys(conv.undo || {}).length));
             const status = document.getElementById('coach-status');
             status.textContent = r.status;
             status.classList.toggle('hidden', !r.status);
@@ -1745,10 +2073,21 @@
                 div.className = 'coach-md mr-4 text-slate-700 leading-relaxed space-y-1';
                 div.innerHTML = coachMarkdown(entry.text);
             } else if (entry.role === 'fill') {
-                div.className = 'text-[12px] bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-2';
+                div.className = 'text-[13px] bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl px-3 py-3 space-y-2';
                 const n = Object.keys(entry.fields).length;
                 const names = [...new Set(Object.keys(entry.fields).map(fieldLabel))].join(', ');
-                div.textContent = `Filled ${n} field${n === 1 ? '' : 's'}: ${names}${entry.note ? ` — ${entry.note}` : ''}`;
+                const head = document.createElement('p');
+                head.className = 'font-bold';
+                head.textContent = `✓ Filled ${n} field${n === 1 ? '' : 's'} in your workbook`;
+                const detail = document.createElement('p');
+                detail.className = 'text-emerald-800';
+                detail.textContent = `${names}${entry.note ? ` — ${entry.note}` : ''}`;
+                const see = document.createElement('button');
+                see.type = 'button';
+                see.className = 'min-h-[40px] px-3 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700';
+                see.textContent = 'See it in the workbook';
+                see.onclick = () => backToWorkbook(Object.keys(entry.fields));
+                div.append(head, detail, see);
             } else if (entry.role === 'answer') {
                 div.className = 'ml-8 text-[12px] bg-slate-100 text-slate-700 rounded-lg px-3 py-2 whitespace-pre-wrap';
                 div.textContent = `Your answer: ${entry.text}`;
@@ -1912,6 +2251,7 @@
             for (const [id, value] of Object.entries(values)) {
                 if (!(id in conv.undo)) conv.undo[id] = currentValue(id);
                 conv.filled[id] = String(value);
+                unseenFilled.add(id);
                 if (id === 'graph_x' || id === 'graph_y') { graph[id === 'graph_x' ? 'x' : 'y'] = Number(value); graphMoved = true; continue; }
                 const el = document.getElementById(id);
                 if (!el) continue;
@@ -1922,8 +2262,10 @@
             }
             if (graphMoved) setMarker(graph.x, graph.y);
             calculateRatio();
+            autosizeAll();
             save();
             saveConvs();
+            updateFillBanner();
         }
 
         // Reverts only the fields this conversation filled and that still hold what the coach
@@ -2081,14 +2423,32 @@
             };
 
             // ---- text fitting: shrink to a minimum size, then wrap, then truncate (and report it) ----
+            // Characters as a person sees them: keeps emoji and accented letters in one piece.
+            const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+            const graphemes = (t) => (segmenter ? [...segmenter.segment(t)].map((x) => x.segment) : [...t]);
+            const isRTL = (t) => /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(t);
+            // Wrap on spaces. A "word" wider than the line (Chinese, Japanese, a URL, a long German
+            // compound) is broken between characters instead of running off the card.
             function wrap(ctx, t, w) {
                 const out = []; let cur = '';
                 for (const word of t.split(' ')) {
                     const tr = cur ? cur + ' ' + word : word;
-                    if (ctx.measureText(tr).width > w && cur) { out.push(cur); cur = word; } else cur = tr;
+                    if (ctx.measureText(tr).width <= w) { cur = tr; continue; }
+                    if (cur) { out.push(cur); cur = ''; }
+                    if (ctx.measureText(word).width <= w) { cur = word; continue; }
+                    for (const g of graphemes(word)) {
+                        if (cur && ctx.measureText(cur + g).width > w) { out.push(cur); cur = g; } else cur += g;
+                    }
                 }
                 if (cur) out.push(cur);
                 return out;
+            }
+            // Draw wrapped lines; right-to-left text (Arabic, Hebrew) is anchored to the right edge.
+            function drawLines(ctx, lines, x, w, firstY, step) {
+                const rtl = isRTL(lines.join(' '));
+                ctx.direction = rtl ? 'rtl' : 'ltr'; ctx.textAlign = rtl ? 'right' : 'left';
+                lines.forEach((l, i) => ctx.fillText(l, rtl ? x + w : x, firstY + step * i));
+                ctx.direction = 'ltr'; ctx.textAlign = 'left';
             }
             function fit(ctx, text, w, h, { max = 72, min = 38, lh = 1.22, weight = 700 }) {
                 text = (text || '').trim().replace(/\s+/g, ' ');
@@ -2103,7 +2463,8 @@
                 if (lines.length <= n) return { size: min, lines, truncated: false };
                 lines = lines.slice(0, n);
                 let last = lines[n - 1];
-                while (last && ctx.measureText(last + '…').width > w) last = last.slice(0, -1).trimEnd();
+                // Cut at a word boundary where there is one, otherwise between characters.
+                while (last && ctx.measureText(last + '…').width > w) last = /\s/.test(last) ? last.replace(/\s+\S*$/, '') : graphemes(last).slice(0, -1).join('').trimEnd();
                 lines[n - 1] = last + '…';
                 return { size: min, lines, truncated: true };
             }
@@ -2251,19 +2612,19 @@
                 meshBg(ctx);
                 ctx.fillStyle = '#fff'; ctx.font = `800 30px ${FONT}`; tracked(ctx, label.toUpperCase(), M, 128, 5);
                 progressPill(ctx, n, CW - M, 118);
-                if (footer) { ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = `500 26px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText(footer, CW - M, CH - 90); ctx.textAlign = 'left'; }
+                if (footer) { ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.font = `600 32px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText(footer, CW - M, CH - 84); ctx.textAlign = 'left'; }
             }
 
             // ---- the cards: each returns { truncated } ----
             function drawSingle(ctx, n, label, text, footer, rule) {
                 frame(ctx, n, label, footer);
-                const py = 230, ph = 780;
+                const py = 230, ph = 880, zone = 620;
                 glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
-                const p = fit(ctx, text, CW - 2 * M - 112, 520, { max: 84, min: 44, weight: 800, lh: 1.15 });
+                const p = fit(ctx, text, CW - 2 * M - 112, zone, { max: 96, min: 44, weight: 800, lh: 1.15 });
                 const blockH = p.lines.length * p.size * 1.15;
-                const top = py + 150 + Math.max(0, (520 - blockH) / 2);
+                const top = py + 150 + Math.max(0, (zone - blockH) / 2);
                 ctx.fillStyle = '#fff'; ctx.font = `800 ${p.size}px ${FONT}`;
-                p.lines.forEach((l, i) => ctx.fillText(l, M + 56, top + p.size * 1.15 * i + p.size * .9));
+                drawLines(ctx, p.lines, M + 56, CW - 2 * M - 112, top + p.size * .9, p.size * 1.15);
                 ctx.fillStyle = grad(ctx, M + 56, 0, M + 152, 0, rule); ctx.fillRect(M + 56, py + ph - 90, 96, 8);
                 sticker(ctx, n, CW - M - 46, py + 30, 88, .12);
                 return { truncated: p.truncated };
@@ -2281,17 +2642,17 @@
                         const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, 'rgba(67,56,202,.35)'); g.addColorStop(1, 'rgba(20,184,166,.35)');
                         ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.restore();
                     }
-                    ctx.fillStyle = hi ? '#5EEAC4' : 'rgba(255,255,255,.55)'; ctx.font = `800 24px ${FONT}`; tracked(ctx, name, x + 34, y + h - 34, 3);
+                    ctx.fillStyle = hi ? '#5EEAC4' : 'rgba(255,255,255,.74)'; ctx.font = `800 26px ${FONT}`; tracked(ctx, name, x + 30, y + h - 32, 2);
                 });
                 const px = mx + d.x / 100 * mw, py = my + d.y / 100 * mh;
                 ctx.fillStyle = grad(ctx, px - 46, 0, px + 46, 0); ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(px, py, 50, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
                 ctx.fillStyle = grad(ctx, px - 26, 0, px + 26, 0); ctx.beginPath(); ctx.arc(px, py, 26, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.stroke();
-                const vy = 880; glassPanel(ctx, M, vy, CW - 2 * M, 320, 28);
+                const vy = 880; glassPanel(ctx, M, vy, CW - 2 * M, 340, 28);
                 ctx.fillStyle = grad(ctx, M + 48, 0, M + 460, 0); ctx.font = `800 28px ${FONT}`; tracked(ctx, 'WHERE THIS LANDS', M + 48, vy + 66, 5);
                 ctx.fillStyle = '#fff'; ctx.font = `800 70px ${FONT}`; ctx.fillText(d.verdict, M + 48, vy + 150);
-                const n = fit(ctx, d.text, CW - 2 * M - 96 - 90, 110, { max: 38, min: 30, weight: 500, lh: 1.3 });
-                ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `500 ${n.size}px ${FONT}`;
-                n.lines.forEach((l, i) => ctx.fillText(l, M + 48, vy + 190 + n.size * 1.3 * i + n.size));
+                const n = fit(ctx, d.text, CW - 2 * M - 96 - 90, 130, { max: 40, min: 30, weight: 500, lh: 1.3 });
+                ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `500 ${n.size}px ${FONT}`;
+                drawLines(ctx, n.lines, M + 48, CW - 2 * M - 96 - 90, vy + 190 + n.size, n.size * 1.3);
                 sticker(ctx, 3, CW - M - 40, vy + 20, 78, .14);
                 return { truncated: n.truncated };
             }
@@ -2304,18 +2665,18 @@
                 ctx.moveTo(M + pad + 11, py + pad + 7); ctx.lineTo(M + pad + 25, py + pad + 21); ctx.moveTo(M + pad + 25, py + pad + 7); ctx.lineTo(M + pad + 11, py + pad + 21); ctx.stroke();
                 ctx.fillStyle = '#fff'; ctx.font = `800 28px ${FONT}`; tracked(ctx, 'BEFORE', M + pad + 52, py + pad + 24, 5);
                 { ctx.font = `800 28px ${FONT}`; const w = ctx.measureText('BEFORE').width + 6 * 5; ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('(Current Pain)', M + pad + 52 + w + 8, py + pad + 24); }
-                const b = fit(ctx, d.before, pw - 2 * pad, h1 - 130 - 50, { max: 56, min: 34, weight: 600 });
+                const b = fit(ctx, d.before, pw - 2 * pad, h1 - 130 - 50, { max: 64, min: 34, weight: 600 });
                 ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `600 ${b.size}px ${FONT}`;
-                b.lines.forEach((l, i) => ctx.fillText(l, M + pad, py + 130 + b.size * 1.22 * i + b.size));
+                drawLines(ctx, b.lines, M + pad, pw - 2 * pad, py + 130 + b.size, b.size * 1.22);
                 const seamY = py + h1 + 30, ay = seamY + 30;
                 glassPanel(ctx, M, ay, pw, h2);
                 ctx.fillStyle = grad(ctx, M + pad, 0, M + pad + 36, 0); ctx.beginPath(); ctx.arc(M + pad + 18, ay + pad + 14, 18, 0, 7); ctx.fill();
                 ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(M + pad + 9, ay + pad + 14); ctx.lineTo(M + pad + 16, ay + pad + 21); ctx.lineTo(M + pad + 28, ay + pad + 8); ctx.stroke();
                 ctx.fillStyle = grad(ctx, M + pad + 52, 0, M + pad + 300, 0); ctx.font = `800 28px ${FONT}`; tracked(ctx, 'AFTER', M + pad + 52, ay + pad + 24, 5);
                 { ctx.font = `800 28px ${FONT}`; const w = ctx.measureText('AFTER').width + 5 * 5; ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('(Future Gain)', M + pad + 52 + w + 8, ay + pad + 24); }
-                const a = fit(ctx, d.after, pw - 2 * pad, h2 - 130 - 50, { max: 56, min: 34, weight: 700 });
+                const a = fit(ctx, d.after, pw - 2 * pad, h2 - 130 - 50, { max: 64, min: 34, weight: 700 });
                 ctx.fillStyle = '#fff'; ctx.font = `700 ${a.size}px ${FONT}`;
-                a.lines.forEach((l, i) => ctx.fillText(l, M + pad, ay + 130 + a.size * 1.22 * i + a.size));
+                drawLines(ctx, a.lines, M + pad, pw - 2 * pad, ay + 130 + a.size, a.size * 1.22);
                 ctx.fillStyle = grad(ctx, CW / 2 - 40, 0, CW / 2 + 40, 0); ctx.beginPath(); ctx.arc(CW / 2, seamY, 40, 0, 7); ctx.fill();
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(CW / 2, seamY - 18); ctx.lineTo(CW / 2, seamY + 16); ctx.moveTo(CW / 2 - 14, seamY + 2); ctx.lineTo(CW / 2, seamY + 17); ctx.lineTo(CW / 2 + 14, seamY + 2); ctx.stroke();
                 sticker(ctx, 4, CW - M - 34, ay + 16, 80, .14);
@@ -2323,11 +2684,12 @@
             }
             function drawPitch(ctx, d) {
                 frame(ctx, 5, 'One-line pitch', 'Made with CrashTest MVP');
-                const py = 230, ph = 780; glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
+                const py = 230, ph = 880; glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
                 ctx.fillStyle = grad(ctx, M + 56, py + 70, M + 56, py + 300); ctx.font = `800 220px ${FONT}`; ctx.fillText('“', M + 40, py + 220);
-                const p = fit(ctx, d.text, CW - 2 * M - 112, 470, { max: 76, min: 40, weight: 800, lh: 1.15 });
+                // Leave room for the name rule at the bottom of the panel when there is a name.
+                const p = fit(ctx, d.text, CW - 2 * M - 112, d.name ? 440 : 540, { max: 88, min: 40, weight: 800, lh: 1.15 });
                 ctx.fillStyle = '#fff'; ctx.font = `800 ${p.size}px ${FONT}`;
-                p.lines.forEach((l, i) => ctx.fillText(l, M + 56, py + 290 + p.size * 1.15 * i + p.size * .9));
+                drawLines(ctx, p.lines, M + 56, CW - 2 * M - 112, py + 290 + p.size * .9, p.size * 1.15);
                 if (d.name) {
                     const ny = py + ph - 100; ctx.fillStyle = grad(ctx, M + 56, 0, M + 152, 0); ctx.fillRect(M + 56, ny, 96, 8);
                     ctx.fillStyle = '#fff'; ctx.font = `700 36px ${FONT}`; ctx.fillText(d.name, M + 56, ny + 56);
@@ -2363,8 +2725,32 @@
                     const { truncated } = drawCard(n);
                     document.getElementById('card_warn_' + n)?.classList.toggle('hidden', !truncated);
                 }
+                document.dispatchEvent(new Event('cards-rendered'));
             }
+            // Small JPEG thumbnails for the workbook list; null where a card has no text yet.
+            // 300x375 (retina-sharp at the widths the menu shows them), halved in two steps so the text stays clean.
+            window.cardThumbs = function () {
+                const step = (src, w, h) => {
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+                    x.drawImage(src, 0, 0, w, h); return c;
+                };
+                return [1, 2, 3, 4, 5].map((n) => {
+                    if (EMPTY_CHECK[n].some((id) => !val(id))) return null;
+                    return step(step(canvasOf(n), 540, 675), 300, 375).toDataURL('image/jpeg', 0.82);
+                });
+            };
             let timer = 0;
+            // Phones: dots under the swipeable card row show which of the five is on screen.
+            (function () {
+                const grid = document.getElementById('cards-grid'), dots = [...document.querySelectorAll('#cards-dots i')];
+                if (!grid || !dots.length) return;
+                grid.addEventListener('scroll', () => {
+                    const max = grid.scrollWidth - grid.clientWidth;
+                    const i = max > 0 ? Math.round((grid.scrollLeft / max) * (dots.length - 1)) : 0;
+                    dots.forEach((d, k) => d.classList.toggle('on', k === i));
+                }, { passive: true });
+            })();
             window.cardsChanged = function () { clearTimeout(timer); timer = setTimeout(renderCards, 150); };
             window.renderCards = renderCards;
             document.addEventListener('DOMContentLoaded', renderCards);
@@ -2386,7 +2772,7 @@
                     const text = firstSentence(document.getElementById(source)?.value);
                     if (text) { el.value = text; filled++; } else missing++;
                 }
-                if (filled) save();
+                if (filled) { autosizeAll(); save(); }
                 showToast(filled ? `Drafted ${filled} card${filled > 1 ? 's' : ''} from your workbook.` + (missing ? ` ${missing} still empty; fill those in.` : '') : (missing ? 'Nothing to draft yet. Fill in the workbook above first.' : 'Every card already has text.'));
             };
 

@@ -19,8 +19,10 @@
     .join { background: #fff; color: #0f172a; border-radius: 20px; padding: 28px 20px 24px; margin: 0 0 32px; text-align: center; box-shadow: 0 4px 24px rgba(15,23,42,.18); }
     .join h2 { font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0 0 4px; }
     .join .sub { color: #475569; font-size: 18px; margin: 0 0 18px; }
-    #qr svg { width: min(78vw, 440px); height: auto; display: block; margin: 0 auto; }
-    #link { font: 700 clamp(15px, 2.6vw, 24px)/1.3 ui-monospace, Menlo, monospace; word-break: break-all; margin: 18px auto 14px; max-width: 640px; user-select: all; }
+    #qr svg { width: min(78vw, 440px, 52vh); height: auto; display: block; margin: 0 auto; }
+    #link { font: 700 clamp(15px, 2.6vw, 24px)/1.3 ui-monospace, Menlo, monospace; overflow-wrap: anywhere; margin: 18px auto 14px; max-width: 640px; user-select: all; }
+    /* No link yet: a plain sentence, not monospace text snapped mid-word. */
+    #link.empty { font: 600 16px/1.4 system-ui, sans-serif; color: #475569; user-select: auto; }
     .join button { font: 600 15px system-ui, sans-serif; padding: 10px 16px; margin: 0 4px 6px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #0f172a; cursor: pointer; }
     .join button.primary { background: #047857; border-color: #047857; color: #fff; }
     .join details { margin-top: 12px; text-align: left; font-size: 14px; color: #475569; }
@@ -78,6 +80,7 @@
     function renderJoin() {
       if (!cfg.base.trim() || !cfg.code.trim()) {
         $('qr').textContent = '';
+        $('link').className = 'empty';
         $('link').textContent = 'Enter the tunnel address and event code below';
         $('join').querySelector('details').open = true;
         return;
@@ -87,7 +90,9 @@
       qr.addData(url);
       qr.make();
       $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
-      $('link').textContent = url;
+      // Offer a line break before "/?e=" so a wrapped link splits at the path, not in the middle of the host.
+      $('link').className = '';
+      $('link').replaceChildren(document.createTextNode(cfg.base.trim().replace(/\/+$/, '')), document.createElement('wbr'), document.createTextNode('/?e=' + encodeURIComponent(cfg.code.trim())));
       try { localStorage.setItem('eventLink', JSON.stringify(cfg)); } catch {}
     }
     $('base').value = cfg.base; $('code').value = cfg.code;
