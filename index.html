@@ -164,12 +164,17 @@
            Brand, then a sticky strip: menu button + section chips. The save/share/workbooks/export/coach
            controls live in the menu: a bottom sheet on phones, a half-width drawer from the left on
            laptops. In event mode on a phone, Brain dump and Make my cards also sit in a bottom dock. */
+        /* One gutter for the brand, the menu strip and the page: 16px on phones (the reference), then the same
+           steps as the page padding. The content column is 72rem wide and centred, so everything lines up. */
+        :root { --gutter: 16px; --edge: max(var(--gutter), calc((100% - 72rem) / 2 + var(--gutter))); }
+        @media (min-width: 768px) { :root { --gutter: 32px; } }
+        @media (min-width: 1024px) { :root { --gutter: 48px; } }
         #menu-backdrop, .event-dock { display: none; }
         #side { display: contents; }
-        #side-brand { order: 1; padding: 16px 16px 12px; background: #fff; }
-        #side-nav { order: 2; position: sticky; top: 0; z-index: 60; display: flex; align-items: stretch; margin: 0; background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
-        #menu-btn { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; min-width: 52px; min-height: 48px; padding: 0 16px; color: #334155; border-right: 1px solid #e2e8f0; font-size: 18px; }
-        #menu-btn:hover { background: #f1f5f9; }
+        #side-brand { order: 1; padding: 16px var(--edge) 12px; background: #fff; }
+        #side-nav { order: 2; padding-left: var(--edge); position: sticky; top: 0; z-index: 60; display: flex; align-items: stretch; margin: 0; background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+        #menu-btn { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex: 0 0 auto; min-height: 48px; padding: 0 16px 0 0; color: #334155; border-right: 1px solid #e2e8f0; font-size: 18px; }
+        #menu-btn:hover { color: #1d4ed8; }
         .nav-scroll { display: flex; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .nav-scroll::-webkit-scrollbar { display: none; }
         .nav-scroll .nav-link { flex: 0 0 auto; min-height: 48px; padding: 0 14px; font-size: 14px; white-space: nowrap; border-bottom: 3px solid transparent; }
@@ -184,7 +189,7 @@
         section[id] { scroll-margin-top: 64px; }
         /* Laptops: the menu opens from the left at half the screen, so the workbook cards have room. */
         @media (min-width: 1024px) {
-            #side-brand { padding: 20px 3rem 14px max(3rem, calc((100% - 72rem) / 2 + 3rem)); }
+            #side-brand { padding-top: 20px; padding-bottom: 14px; }
             #side-actions { left: 0; right: auto; top: 0; bottom: 0; width: 50vw; min-width: 520px; max-width: 800px; max-height: none; border-radius: 0 20px 20px 0; padding: 24px 28px; box-shadow: 12px 0 40px rgba(15, 23, 42, 0.3); transform: translateX(-105%); }
         }
         @media (max-width: 1023px) {
@@ -271,7 +276,7 @@
                 <!-- Saved workbooks on this device: each is a card with its title, five card slots and a Load button -->
                 <div>
                     <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Workbooks</p>
-                    <div id="wb-list" class="space-y-2.5 max-h-[40dvh] lg:max-h-[46dvh] overflow-y-auto overscroll-contain" role="list" aria-label="Saved workbooks"></div>
+                    <div id="wb-list" class="space-y-2.5 max-h-[40dvh] lg:max-h-none overflow-y-auto overscroll-contain" role="list" aria-label="Saved workbooks"></div>
                 </div>
 
                 <div class="h-px bg-slate-200"></div>
@@ -1636,12 +1641,12 @@
         }
 
         // --- Workbook library: saved workbooks on this device, shown as cards in the menu ---
-        const LIBRARY_MAX = 12;
-        const getLibrary = () => { const l = store.getJson('library', []); return Array.isArray(l) ? l : []; };
+        const LIBRARY_MAX = 8;
+        const getLibrary = () => { const l = store.getJson('library2', []); return Array.isArray(l) ? l : []; };
         function upsertLibrary(entry) {
             const lib = getLibrary().filter((w) => w.id !== entry.id);
             lib.unshift(entry);
-            store.setJson('library', lib.slice(0, LIBRARY_MAX));
+            store.setJson('library2', lib.slice(0, LIBRARY_MAX));
         }
         // Called after every successful save: remember the title and a thumbnail of each written card.
         async function rememberWorkbook() {
@@ -1697,7 +1702,7 @@
                     if (src) {
                         // A canvas, not an <img>: the CSP has no img-src for data: URLs.
                         const thumb = wbEl('canvas', 'w-full h-auto rounded-md border border-slate-200');
-                        thumb.width = 120; thumb.height = 150;
+                        thumb.width = 300; thumb.height = 375;
                         thumb.setAttribute('role', 'img'); thumb.setAttribute('aria-label', `Card ${i + 1}`);
                         paintThumb(src, thumb);
                         slots.append(thumb);
@@ -2694,13 +2699,16 @@
                 document.dispatchEvent(new Event('cards-rendered'));
             }
             // Small JPEG thumbnails for the workbook list; null where a card has no text yet.
+            // 300x375 (retina-sharp at the widths the menu shows them), halved in two steps so the text stays clean.
             window.cardThumbs = function () {
+                const step = (src, w, h) => {
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+                    x.drawImage(src, 0, 0, w, h); return c;
+                };
                 return [1, 2, 3, 4, 5].map((n) => {
                     if (EMPTY_CHECK[n].some((id) => !val(id))) return null;
-                    const small = document.createElement('canvas');
-                    small.width = 120; small.height = 150;
-                    small.getContext('2d').drawImage(canvasOf(n), 0, 0, 120, 150);
-                    return small.toDataURL('image/jpeg', 0.7);
+                    return step(step(canvasOf(n), 540, 675), 300, 375).toDataURL('image/jpeg', 0.82);
                 });
             };
             let timer = 0;
