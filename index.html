@@ -2206,14 +2206,32 @@
             };
 
             // ---- text fitting: shrink to a minimum size, then wrap, then truncate (and report it) ----
+            // Characters as a person sees them: keeps emoji and accented letters in one piece.
+            const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+            const graphemes = (t) => (segmenter ? [...segmenter.segment(t)].map((x) => x.segment) : [...t]);
+            const isRTL = (t) => /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(t);
+            // Wrap on spaces. A "word" wider than the line (Chinese, Japanese, a URL, a long German
+            // compound) is broken between characters instead of running off the card.
             function wrap(ctx, t, w) {
                 const out = []; let cur = '';
                 for (const word of t.split(' ')) {
                     const tr = cur ? cur + ' ' + word : word;
-                    if (ctx.measureText(tr).width > w && cur) { out.push(cur); cur = word; } else cur = tr;
+                    if (ctx.measureText(tr).width <= w) { cur = tr; continue; }
+                    if (cur) { out.push(cur); cur = ''; }
+                    if (ctx.measureText(word).width <= w) { cur = word; continue; }
+                    for (const g of graphemes(word)) {
+                        if (cur && ctx.measureText(cur + g).width > w) { out.push(cur); cur = g; } else cur += g;
+                    }
                 }
                 if (cur) out.push(cur);
                 return out;
+            }
+            // Draw wrapped lines; right-to-left text (Arabic, Hebrew) is anchored to the right edge.
+            function drawLines(ctx, lines, x, w, firstY, step) {
+                const rtl = isRTL(lines.join(' '));
+                ctx.direction = rtl ? 'rtl' : 'ltr'; ctx.textAlign = rtl ? 'right' : 'left';
+                lines.forEach((l, i) => ctx.fillText(l, rtl ? x + w : x, firstY + step * i));
+                ctx.direction = 'ltr'; ctx.textAlign = 'left';
             }
             function fit(ctx, text, w, h, { max = 72, min = 38, lh = 1.22, weight = 700 }) {
                 text = (text || '').trim().replace(/\s+/g, ' ');
@@ -2228,7 +2246,8 @@
                 if (lines.length <= n) return { size: min, lines, truncated: false };
                 lines = lines.slice(0, n);
                 let last = lines[n - 1];
-                while (last && ctx.measureText(last + '…').width > w) last = last.slice(0, -1).trimEnd();
+                // Cut at a word boundary where there is one, otherwise between characters.
+                while (last && ctx.measureText(last + '…').width > w) last = /\s/.test(last) ? last.replace(/\s+\S*$/, '') : graphemes(last).slice(0, -1).join('').trimEnd();
                 lines[n - 1] = last + '…';
                 return { size: min, lines, truncated: true };
             }
@@ -2376,19 +2395,19 @@
                 meshBg(ctx);
                 ctx.fillStyle = '#fff'; ctx.font = `800 30px ${FONT}`; tracked(ctx, label.toUpperCase(), M, 128, 5);
                 progressPill(ctx, n, CW - M, 118);
-                if (footer) { ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = `500 26px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText(footer, CW - M, CH - 90); ctx.textAlign = 'left'; }
+                if (footer) { ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.font = `600 32px ${FONT}`; ctx.textAlign = 'right'; ctx.fillText(footer, CW - M, CH - 84); ctx.textAlign = 'left'; }
             }
 
             // ---- the cards: each returns { truncated } ----
             function drawSingle(ctx, n, label, text, footer, rule) {
                 frame(ctx, n, label, footer);
-                const py = 230, ph = 780;
+                const py = 230, ph = 880, zone = 620;
                 glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
-                const p = fit(ctx, text, CW - 2 * M - 112, 520, { max: 84, min: 44, weight: 800, lh: 1.15 });
+                const p = fit(ctx, text, CW - 2 * M - 112, zone, { max: 96, min: 44, weight: 800, lh: 1.15 });
                 const blockH = p.lines.length * p.size * 1.15;
-                const top = py + 150 + Math.max(0, (520 - blockH) / 2);
+                const top = py + 150 + Math.max(0, (zone - blockH) / 2);
                 ctx.fillStyle = '#fff'; ctx.font = `800 ${p.size}px ${FONT}`;
-                p.lines.forEach((l, i) => ctx.fillText(l, M + 56, top + p.size * 1.15 * i + p.size * .9));
+                drawLines(ctx, p.lines, M + 56, CW - 2 * M - 112, top + p.size * .9, p.size * 1.15);
                 ctx.fillStyle = grad(ctx, M + 56, 0, M + 152, 0, rule); ctx.fillRect(M + 56, py + ph - 90, 96, 8);
                 sticker(ctx, n, CW - M - 46, py + 30, 88, .12);
                 return { truncated: p.truncated };
@@ -2406,17 +2425,17 @@
                         const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, 'rgba(67,56,202,.35)'); g.addColorStop(1, 'rgba(20,184,166,.35)');
                         ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.restore();
                     }
-                    ctx.fillStyle = hi ? '#5EEAC4' : 'rgba(255,255,255,.55)'; ctx.font = `800 24px ${FONT}`; tracked(ctx, name, x + 34, y + h - 34, 3);
+                    ctx.fillStyle = hi ? '#5EEAC4' : 'rgba(255,255,255,.74)'; ctx.font = `800 26px ${FONT}`; tracked(ctx, name, x + 30, y + h - 32, 2);
                 });
                 const px = mx + d.x / 100 * mw, py = my + d.y / 100 * mh;
                 ctx.fillStyle = grad(ctx, px - 46, 0, px + 46, 0); ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(px, py, 50, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
                 ctx.fillStyle = grad(ctx, px - 26, 0, px + 26, 0); ctx.beginPath(); ctx.arc(px, py, 26, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.stroke();
-                const vy = 880; glassPanel(ctx, M, vy, CW - 2 * M, 320, 28);
+                const vy = 880; glassPanel(ctx, M, vy, CW - 2 * M, 340, 28);
                 ctx.fillStyle = grad(ctx, M + 48, 0, M + 460, 0); ctx.font = `800 28px ${FONT}`; tracked(ctx, 'WHERE THIS LANDS', M + 48, vy + 66, 5);
                 ctx.fillStyle = '#fff'; ctx.font = `800 70px ${FONT}`; ctx.fillText(d.verdict, M + 48, vy + 150);
-                const n = fit(ctx, d.text, CW - 2 * M - 96 - 90, 110, { max: 38, min: 30, weight: 500, lh: 1.3 });
-                ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `500 ${n.size}px ${FONT}`;
-                n.lines.forEach((l, i) => ctx.fillText(l, M + 48, vy + 190 + n.size * 1.3 * i + n.size));
+                const n = fit(ctx, d.text, CW - 2 * M - 96 - 90, 130, { max: 40, min: 30, weight: 500, lh: 1.3 });
+                ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `500 ${n.size}px ${FONT}`;
+                drawLines(ctx, n.lines, M + 48, CW - 2 * M - 96 - 90, vy + 190 + n.size, n.size * 1.3);
                 sticker(ctx, 3, CW - M - 40, vy + 20, 78, .14);
                 return { truncated: n.truncated };
             }
@@ -2429,18 +2448,18 @@
                 ctx.moveTo(M + pad + 11, py + pad + 7); ctx.lineTo(M + pad + 25, py + pad + 21); ctx.moveTo(M + pad + 25, py + pad + 7); ctx.lineTo(M + pad + 11, py + pad + 21); ctx.stroke();
                 ctx.fillStyle = '#fff'; ctx.font = `800 28px ${FONT}`; tracked(ctx, 'BEFORE', M + pad + 52, py + pad + 24, 5);
                 { ctx.font = `800 28px ${FONT}`; const w = ctx.measureText('BEFORE').width + 6 * 5; ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('(Current Pain)', M + pad + 52 + w + 8, py + pad + 24); }
-                const b = fit(ctx, d.before, pw - 2 * pad, h1 - 130 - 50, { max: 56, min: 34, weight: 600 });
+                const b = fit(ctx, d.before, pw - 2 * pad, h1 - 130 - 50, { max: 64, min: 34, weight: 600 });
                 ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `600 ${b.size}px ${FONT}`;
-                b.lines.forEach((l, i) => ctx.fillText(l, M + pad, py + 130 + b.size * 1.22 * i + b.size));
+                drawLines(ctx, b.lines, M + pad, pw - 2 * pad, py + 130 + b.size, b.size * 1.22);
                 const seamY = py + h1 + 30, ay = seamY + 30;
                 glassPanel(ctx, M, ay, pw, h2);
                 ctx.fillStyle = grad(ctx, M + pad, 0, M + pad + 36, 0); ctx.beginPath(); ctx.arc(M + pad + 18, ay + pad + 14, 18, 0, 7); ctx.fill();
                 ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(M + pad + 9, ay + pad + 14); ctx.lineTo(M + pad + 16, ay + pad + 21); ctx.lineTo(M + pad + 28, ay + pad + 8); ctx.stroke();
                 ctx.fillStyle = grad(ctx, M + pad + 52, 0, M + pad + 300, 0); ctx.font = `800 28px ${FONT}`; tracked(ctx, 'AFTER', M + pad + 52, ay + pad + 24, 5);
                 { ctx.font = `800 28px ${FONT}`; const w = ctx.measureText('AFTER').width + 5 * 5; ctx.font = `500 28px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillText('(Future Gain)', M + pad + 52 + w + 8, ay + pad + 24); }
-                const a = fit(ctx, d.after, pw - 2 * pad, h2 - 130 - 50, { max: 56, min: 34, weight: 700 });
+                const a = fit(ctx, d.after, pw - 2 * pad, h2 - 130 - 50, { max: 64, min: 34, weight: 700 });
                 ctx.fillStyle = '#fff'; ctx.font = `700 ${a.size}px ${FONT}`;
-                a.lines.forEach((l, i) => ctx.fillText(l, M + pad, ay + 130 + a.size * 1.22 * i + a.size));
+                drawLines(ctx, a.lines, M + pad, pw - 2 * pad, ay + 130 + a.size, a.size * 1.22);
                 ctx.fillStyle = grad(ctx, CW / 2 - 40, 0, CW / 2 + 40, 0); ctx.beginPath(); ctx.arc(CW / 2, seamY, 40, 0, 7); ctx.fill();
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(CW / 2, seamY - 18); ctx.lineTo(CW / 2, seamY + 16); ctx.moveTo(CW / 2 - 14, seamY + 2); ctx.lineTo(CW / 2, seamY + 17); ctx.lineTo(CW / 2 + 14, seamY + 2); ctx.stroke();
                 sticker(ctx, 4, CW - M - 34, ay + 16, 80, .14);
@@ -2448,11 +2467,12 @@
             }
             function drawPitch(ctx, d) {
                 frame(ctx, 5, 'One-line pitch', 'Made with CrashTest MVP');
-                const py = 230, ph = 780; glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
+                const py = 230, ph = 880; glassPanel(ctx, M, py, CW - 2 * M, ph, 40);
                 ctx.fillStyle = grad(ctx, M + 56, py + 70, M + 56, py + 300); ctx.font = `800 220px ${FONT}`; ctx.fillText('“', M + 40, py + 220);
-                const p = fit(ctx, d.text, CW - 2 * M - 112, 470, { max: 76, min: 40, weight: 800, lh: 1.15 });
+                // Leave room for the name rule at the bottom of the panel when there is a name.
+                const p = fit(ctx, d.text, CW - 2 * M - 112, d.name ? 440 : 540, { max: 88, min: 40, weight: 800, lh: 1.15 });
                 ctx.fillStyle = '#fff'; ctx.font = `800 ${p.size}px ${FONT}`;
-                p.lines.forEach((l, i) => ctx.fillText(l, M + 56, py + 290 + p.size * 1.15 * i + p.size * .9));
+                drawLines(ctx, p.lines, M + 56, CW - 2 * M - 112, py + 290 + p.size * .9, p.size * 1.15);
                 if (d.name) {
                     const ny = py + ph - 100; ctx.fillStyle = grad(ctx, M + 56, 0, M + 152, 0); ctx.fillRect(M + 56, ny, 96, 8);
                     ctx.fillStyle = '#fff'; ctx.font = `700 36px ${FONT}`; ctx.fillText(d.name, M + 56, ny + 56);
