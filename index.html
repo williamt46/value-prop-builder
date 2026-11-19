@@ -261,9 +261,11 @@
                 <button onclick="copyShareLink()" class="w-full bg-white border border-slate-300 text-slate-700 py-2 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center text-xs font-bold shadow-sm">
                     <i class="fas fa-link mr-2 text-blue-500"></i>Copy share link
                 </button>
-                <button id="edit-details-btn" onclick="openDetailsModal()" class="hidden w-full text-slate-500 text-[11px] hover:text-slate-800">
-                    Edit workbook details
-                </button>
+                <!-- Saved workbooks on this device: each is a card with its title, five card slots and a Load button -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Workbooks</p>
+                    <div id="wb-list" class="space-y-2.5 max-h-[40dvh] lg:max-h-72 overflow-y-auto overscroll-contain" role="list" aria-label="Saved workbooks"></div>
+                </div>
 
                 <div class="h-px bg-slate-200"></div>
 
@@ -1138,7 +1140,6 @@
             document.getElementById('save-dot').className = `status-dot ${dot} flex-shrink-0`;
             document.getElementById('save-btn').disabled = saving;
             document.getElementById('save-btn-label').textContent = current && !owner ? 'Save my own copy' : 'Save workbook';
-            document.getElementById('edit-details-btn').classList.toggle('hidden', !owner);
 
             const viewing = !!current && !owner;
             document.getElementById('shared-banner').classList.toggle('hidden', !viewing);
@@ -1243,6 +1244,7 @@
                 saving = false;
                 setDirty(false);
                 showToast(owner ? 'Workbook saved.' : 'Workbook saved. Your share link is ready.');
+                rememberWorkbook();
                 return true;
             } catch (err) {
                 saving = false;
@@ -1622,10 +1624,110 @@
             document.getElementById('modal-content').replaceChildren(p);
         }
 
+        // --- Workbook library: saved workbooks on this device, shown as cards in the menu ---
+        const LIBRARY_MAX = 12;
+        const getLibrary = () => { const l = store.getJson('library', []); return Array.isArray(l) ? l : []; };
+        function upsertLibrary(entry) {
+            const lib = getLibrary().filter((w) => w.id !== entry.id);
+            lib.unshift(entry);
+            store.setJson('library', lib.slice(0, LIBRARY_MAX));
+        }
+        // Called after every successful save: remember the title and a thumbnail of each written card.
+        async function rememberWorkbook() {
+            if (!current) return;
+            try { await window.renderCards(); } catch (e) {}
+            upsertLibrary({ id: current.id, title: current.title, updatedAt: savedAt || new Date().toISOString(), thumbs: window.cardThumbs ? window.cardThumbs() : [] });
+            renderLibrary();
+        }
+        async function paintThumb(dataUrl, canvas) {
+            try {
+                const bin = atob(dataUrl.split(',')[1]);
+                const bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+                const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+                canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            } catch (e) { canvas.classList.add('bg-slate-100'); }
+        }
+        function wbEl(tag, cls, text) {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text !== undefined) e.textContent = text;
+            return e;
+        }
+        function renderLibrary() {
+            const list = document.getElementById('wb-list');
+            if (!list) return;
+            const keep = list.scrollTop;
+            const owner = isOwner();
+            const live = window.cardThumbs ? window.cardThumbs() : [];
+            const lib = getLibrary();
+            if (owner && !lib.some((w) => w.id === current.id)) { upsertLibrary({ id: current.id, title: current.title, updatedAt: savedAt, thumbs: live }); lib.unshift({ id: current.id, title: current.title, updatedAt: savedAt, thumbs: live }); }
+            // The open workbook first (a draft shows as "Untitled draft"), then the saved ones.
+            const items = [{ id: current?.id || null, title: current?.title || 'Untitled draft', updatedAt: owner ? savedAt : null, thumbs: live, open: true }];
+            lib.filter((w) => w.id !== current?.id).forEach((w) => items.push({ ...w, open: false }));
+            list.replaceChildren(...items.map((w) => {
+                const card = wbEl('div', `rounded-xl border bg-white p-3 space-y-2.5 ${w.open ? 'border-blue-300 ring-1 ring-blue-100' : 'border-slate-200'}`);
+                card.setAttribute('role', 'listitem');
+                // The open workbook's title is the way to edit its details (name, owner, organisation).
+                const editable = w.open && (owner || !current);
+                if (editable) {
+                    const t = wbEl('button', 'w-full min-h-[44px] -my-1 flex items-center justify-between gap-2 text-left text-sm font-bold text-slate-900 hover:text-blue-700');
+                    t.type = 'button';
+                    t.setAttribute('aria-label', `Edit workbook details: ${w.title}`);
+                    t.append(wbEl('span', 'truncate', w.title), wbEl('i', 'fas fa-pen text-[11px] text-slate-400 flex-shrink-0'));
+                    t.onclick = () => openDetailsModal();
+                    card.append(t);
+                } else {
+                    card.append(wbEl('p', 'text-sm font-bold text-slate-900 truncate', w.title));
+                }
+                const slots = wbEl('div', 'grid grid-cols-5 gap-1.5');
+                for (let i = 0; i < 5; i++) {
+                    const src = (w.thumbs || [])[i];
+                    if (src) {
+                        // A canvas, not an <img>: the CSP has no img-src for data: URLs.
+                        const thumb = wbEl('canvas', 'w-full h-auto rounded-md border border-slate-200');
+                        thumb.width = 120; thumb.height = 150;
+                        thumb.setAttribute('role', 'img'); thumb.setAttribute('aria-label', `Card ${i + 1}`);
+                        paintThumb(src, thumb);
+                        slots.append(thumb);
+                    } else {
+                        const empty = wbEl('div', 'w-full aspect-[4/5] rounded-md border-2 border-dashed border-slate-300 bg-slate-50');
+                        empty.setAttribute('role', 'img'); empty.setAttribute('aria-label', `Card ${i + 1} not written yet`);
+                        slots.append(empty);
+                    }
+                }
+                card.append(slots);
+                if (w.open) {
+                    card.append(wbEl('p', 'text-xs font-semibold text-blue-600', w.id ? `Open now${w.updatedAt ? ' · saved ' + formatSavedTime(w.updatedAt) : ''}` : 'Open now · not saved yet'));
+                } else {
+                    const load = wbEl('button', 'w-full min-h-[44px] bg-white border border-slate-300 text-slate-800 rounded-lg text-xs font-bold hover:bg-slate-50 flex items-center justify-center gap-2');
+                    load.type = 'button';
+                    load.append(wbEl('i', 'fas fa-folder-open text-blue-500'), document.createTextNode('Load workbook'));
+                    load.setAttribute('aria-label', `Load workbook: ${w.title}`);
+                    load.onclick = () => loadWorkbook(w.id);
+                    card.append(load);
+                }
+                return card;
+            }));
+            list.scrollTop = keep;
+        }
+        async function loadWorkbook(id) {
+            toggleMenu(false);
+            await openShared(id);
+            if (current?.id !== id) return;   // cancelled, or it could not be opened (openShared already said why)
+            syncUrl();
+            updateSaveUI();
+            renderLibrary();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast(`Opened "${current.title}".`);
+        }
+        let libraryTimer;
+        document.addEventListener('cards-rendered', () => { clearTimeout(libraryTimer); libraryTimer = setTimeout(renderLibrary, 250); });
+
         // Phones: save/share/export live in a bottom sheet behind the menu button.
         function toggleMenu(force) {
             const open = force === undefined ? !document.body.classList.contains('menu-open') : force;
             document.body.classList.toggle('menu-open', open);
+            if (open) renderLibrary();
             document.getElementById('menu-btn')?.setAttribute('aria-expanded', String(open));
         }
         document.getElementById('side-actions').addEventListener('click', (e) => { if (e.target.closest('a, button')) toggleMenu(false); });
@@ -2568,7 +2670,18 @@
                     const { truncated } = drawCard(n);
                     document.getElementById('card_warn_' + n)?.classList.toggle('hidden', !truncated);
                 }
+                document.dispatchEvent(new Event('cards-rendered'));
             }
+            // Small JPEG thumbnails for the workbook list; null where a card has no text yet.
+            window.cardThumbs = function () {
+                return [1, 2, 3, 4, 5].map((n) => {
+                    if (EMPTY_CHECK[n].some((id) => !val(id))) return null;
+                    const small = document.createElement('canvas');
+                    small.width = 120; small.height = 150;
+                    small.getContext('2d').drawImage(canvasOf(n), 0, 0, 120, 150);
+                    return small.toDataURL('image/jpeg', 0.7);
+                });
+            };
             let timer = 0;
             // Phones: dots under the swipeable card row show which of the five is on screen.
             (function () {
