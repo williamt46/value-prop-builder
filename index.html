@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>CrashTest MVP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        /* Some tooltips sit past the right edge and gave the desktop page a sideways scrollbar. */
+        html, body { overflow-x: clip; }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
@@ -123,6 +126,12 @@
         body.coach-open #coach-tabs { right: 460px; }
         @media (max-width: 639px) { body.coach-open #coach-tabs { display: none; } }
         #coach-panel.open { transform: translateX(0); }
+        /* Closed, the panel sits just off screen and its shadow leaked a grey band down the right edge. */
+        #coach-panel:not(.open) { box-shadow: none; visibility: hidden; transition: transform 0.25s ease, visibility 0s 0.25s; }
+        /* Before anything is pasted the brain-dump box takes the whole panel instead of a blank chat log. */
+        #coach-panel.dump-first #coach-log { display: none; }
+        #coach-panel.dump-first #coach-dump { flex: 1; display: flex; flex-direction: column; overflow-y: auto; border-top: 0; }
+        #coach-panel.dump-first #coach-dump-text { flex: 1; min-height: 160px; }
         .coach-md code { background: #f1f5f9; padding: 0 4px; border-radius: 4px; font-size: 0.85em; }
 
         .status-ok { background-color: #10b981; }
@@ -130,8 +139,9 @@
         .status-err { background-color: #ef4444; }
 
         /* Graph Styles */
+        /* Vertical swipes over the map scroll the page; only the marker itself is dragged (see initGraph). */
         #need_graph {
-            touch-action: none;
+            touch-action: pan-y;
         }
         .quadrant-label {
             position: absolute;
@@ -141,18 +151,71 @@
             text-transform: uppercase;
             pointer-events: none;
         }
+        /* The marker is 24px; a 48px invisible halo makes it easy to grab with a thumb. */
+        #graph_marker { touch-action: none; }
+        #graph_marker::after { content: ''; position: absolute; inset: -12px; border-radius: 9999px; }
+
+        /* ===== Phones and tablets (under 1024px) =====
+           The sidebar stops being a tall block above the workbook: sections become a sticky strip of
+           chips, save/export/coach controls move into a bottom sheet, and in event mode the two things an
+           attendee needs (brain dump, Make my cards) sit in a dock at the bottom of the screen. */
+        #menu-btn, #menu-backdrop, .event-dock { display: none; }
+        .nav-scroll { display: block; }
+        @media (max-width: 1023px) {
+            #side { display: contents; }
+            #side-brand { order: 1; padding: 16px 16px 12px; background: #fff; }
+            #side-nav { order: 2; position: sticky; top: 0; z-index: 60; display: flex; align-items: stretch; margin: 0; background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+            #menu-btn { display: flex; align-items: center; justify-content: center; flex: 0 0 52px; min-height: 48px; color: #334155; border-right: 1px solid #e2e8f0; font-size: 18px; }
+            .nav-scroll { display: flex; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            .nav-scroll::-webkit-scrollbar { display: none; }
+            .nav-scroll .nav-link { flex: 0 0 auto; min-height: 48px; padding: 0 14px; font-size: 14px; white-space: nowrap; border-bottom: 3px solid transparent; }
+            .nav-scroll .nav-link .w-5 { width: auto; }
+            .nav-scroll .nav-link.active { background: transparent; border-right: 0; border-bottom-color: #2563eb; }
+            #side-actions { order: 3; position: fixed; left: 0; right: 0; bottom: 0; z-index: 220; max-height: 88dvh; overflow-y: auto; border-radius: 20px 20px 0 0; border-top: 0; box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.3); padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); transform: translateY(105%); visibility: hidden; transition: transform 0.22s ease, visibility 0s 0.22s; }
+            body.menu-open #side-actions { transform: none; visibility: visible; transition: transform 0.22s ease; }
+            #side-actions button, #side-actions a { min-height: 44px; }
+            #menu-backdrop { position: fixed; inset: 0; z-index: 215; background: rgba(15, 23, 42, 0.5); }
+            body.menu-open #menu-backdrop { display: block; }
+            main#main { order: 4; }
+            .event-mode main#main { padding-bottom: 6rem; }
+            section[id] { scroll-margin-top: 64px; }
+            .event-mode .event-dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.97); border-top: 1px solid #e2e8f0; box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.08); }
+            .event-dock button { min-height: 48px; border-radius: 12px; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+            .event-mode #coach-tabs { display: none; }
+            #toast { left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); text-align: center; padding: 12px 16px; }
+            .event-mode #toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
+            /* iOS zooms the page when a field under 16px gets focus; keep every field at 16px. */
+            input, textarea, select { font-size: 16px !important; }
+            textarea { resize: none; }
+        }
+        /* Coach tab on a phone: a bottom-right button, not a vertical pill over the text. */
+        @media (max-width: 639px) {
+            #coach-tabs { top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); right: 12px; transform: none; flex-direction: row; }
+            #coach-tabs button { flex-direction: row; border-radius: 12px; min-height: 44px; padding: 10px 14px; }
+            #coach-tabs span { writing-mode: horizontal-tb !important; font-size: 13px; }
+            #coach-panel { height: 100dvh; }
+            #cards-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 -16px; padding: 0 16px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            #cards-grid::-webkit-scrollbar { display: none; }
+            #cards-grid > .glass-card { flex: 0 0 86%; scroll-snap-align: center; min-width: 0; }
+            #cards-dots { display: flex; }
+        }
+        #cards-dots { display: none; justify-content: center; gap: 8px; margin: 4px 0 0; }
+        #cards-dots i { width: 8px; height: 8px; border-radius: 9999px; background: #cbd5e1; transition: background 0.2s, transform 0.2s; }
+        #cards-dots i.on { background: #7c3aed; transform: scale(1.25); }
     </style>
 </head>
 <body class="text-slate-800 ai-off coach-off">
 
     <div class="flex flex-col lg:flex-row min-h-screen">
         <!-- Sidebar -->
-        <aside class="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 relative lg:fixed h-auto lg:h-full lg:overflow-y-auto no-print flex flex-col z-20">
-            <div class="p-6">
+        <aside id="side" class="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 relative lg:fixed h-auto lg:h-full lg:overflow-y-auto no-print flex flex-col z-20">
+            <div id="side-brand" class="p-6">
                 <h1 class="text-xl font-bold text-blue-600">CrashTest MVP</h1>
                 <p class="text-xs text-slate-500 mt-1">Interactive Framework Guide</p>
             </div>
-            <nav class="mt-4 flex-1">
+            <nav id="side-nav" class="lg:mt-4 lg:flex-1" aria-label="Workbook sections">
+                <button type="button" id="menu-btn" onclick="toggleMenu()" aria-label="Menu: save, share, export" aria-expanded="false" aria-controls="side-actions"><i class="fas fa-bars"></i></button>
+                <div class="nav-scroll">
                 <a href="#who" class="nav-link flex items-center px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-users w-5"></i> <span class="ml-3">Defining the "Who"</span>
                 </a>
@@ -171,10 +234,16 @@
                 <a href="#cards" class="nav-link flex items-center px-6 py-3 text-slate-600 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-images w-5"></i> <span class="ml-3">Share cards</span>
                 </a>
+                </div>
             </nav>
+            <div id="menu-backdrop" onclick="toggleMenu(false)"></div>
 
             <!-- Workbook Storage, Sharing & Export -->
-            <div class="p-6 bg-slate-50 border-t border-slate-200 space-y-3">
+            <div id="side-actions" class="p-6 bg-slate-50 border-t border-slate-200 space-y-3" role="dialog" aria-label="Save, share and export">
+                <div class="lg:hidden flex items-center justify-between -mt-1">
+                    <p class="text-sm font-bold text-slate-800">Menu</p>
+                    <button type="button" onclick="toggleMenu(false)" class="w-11 h-11 -mr-2 flex items-center justify-center text-slate-500" aria-label="Close menu"><i class="fas fa-times"></i></button>
+                </div>
                 <!-- Status -->
                 <div class="flex items-center justify-between text-[11px] text-slate-500">
                     <span id="save-status-text" class="truncate pr-2">Draft (not saved)</span>
@@ -252,10 +321,10 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 ml-0 lg:ml-64 p-4 md:p-8 lg:p-12 w-full">
-            <header class="mb-12">
-                <h2 class="text-3xl font-bold text-slate-900">CrashTest MVP</h2>
-                <p class="text-slate-500 max-w-2xl mt-2">Use this space to define, evaluate, and build a product people actually want.</p>
+        <main id="main" class="flex-1 ml-0 lg:ml-64 p-4 md:p-8 lg:p-12 w-full min-w-0">
+            <header class="mb-8 lg:mb-12">
+                <h2 class="hidden lg:block text-3xl font-bold text-slate-900">CrashTest MVP</h2>
+                <p class="text-slate-500 max-w-2xl lg:mt-2">Use this space to define, evaluate, and build a product people actually want.</p>
             </header>
 
             <!-- Shown when viewing someone else's shared workbook -->
@@ -641,21 +710,21 @@
                         Share cards
                     </h3>
                 </div>
-                <p class="text-slate-500 text-sm mb-6 max-w-2xl">Five cards for LinkedIn and Threads. Edit the wording under each card; the preview updates as you type. Card 3 follows your needs map.</p>
+                <p class="text-slate-500 text-sm mb-5 sm:mb-6 max-w-2xl">Five cards for LinkedIn and Threads. Edit the wording under each card; the preview updates as you type. Card 3 follows your needs map.<span class="sm:hidden"> Swipe sideways for all five.</span></p>
 
-                <div class="flex flex-col sm:flex-row flex-wrap gap-3 mb-8">
-                    <button type="button" onclick="draftCardsFromWorkbook()" class="bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg hover:bg-slate-50 text-sm font-bold shadow-sm flex items-center justify-center">
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mb-6 sm:mb-8">
+                    <button type="button" onclick="draftCardsFromWorkbook()" class="col-span-2 bg-white border border-slate-300 text-slate-700 px-4 py-3 sm:py-2.5 rounded-lg hover:bg-slate-50 text-sm font-bold shadow-sm flex items-center justify-center">
                         <i class="fas fa-wand-magic-sparkles mr-2 text-violet-500"></i> Draft from my workbook
                     </button>
-                    <button type="button" id="cards-linkedin-btn" onclick="exportCards('linkedin')" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
+                    <button type="button" id="cards-linkedin-btn" onclick="exportCards('linkedin')" class="bg-blue-600 text-white px-3 sm:px-4 py-3 sm:py-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
                         <i class="fab fa-linkedin mr-2"></i> LinkedIn (5 cards)
                     </button>
-                    <button type="button" id="cards-threads-btn" onclick="exportCards('threads')" class="bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-black text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
+                    <button type="button" id="cards-threads-btn" onclick="exportCards('threads')" class="bg-slate-900 text-white px-3 sm:px-4 py-3 sm:py-2.5 rounded-lg hover:bg-black text-sm font-bold shadow-sm flex items-center justify-center disabled:opacity-60">
                         <i class="fas fa-at mr-2"></i> Threads (2 images)
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-6">
                     <div class="glass-card p-4 rounded-xl shadow-sm">
                         <canvas id="card_canvas_1" width="1080" height="1350" class="w-full h-auto rounded-lg border border-slate-200"></canvas>
                         <label for="card_who" class="block text-xs font-bold text-slate-500 uppercase mt-3">1 · Who it's for</label>
@@ -691,6 +760,7 @@
                         <p id="card_warn_5" class="hidden text-xs text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>Text is cut off on the card. Shorten it.</p>
                     </div>
                 </div>
+                <div id="cards-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
             </section>
 
             <!-- Final AI Summary -->
@@ -779,22 +849,26 @@
 
     <!-- Coach panel (local only) -->
     <aside id="coach-panel" class="coach-feature no-print fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white border-l border-slate-200 shadow-2xl z-[190] flex flex-col" aria-label="Coach" aria-hidden="true">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="pl-5 pr-2 py-2.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <div class="min-w-0">
                 <h4 id="coach-title" class="text-base font-bold text-slate-800 truncate">Coach</h4>
                 <p id="coach-subtitle" class="text-[11px] text-slate-500 truncate"></p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <button id="coach-undo" onclick="undoCoachFill()" class="hidden text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 hover:bg-amber-100">Undo AI fill</button>
-                <button onclick="resetCoach()" title="Start over" class="text-slate-400 hover:text-slate-600 px-1"><i class="fas fa-rotate-left"></i></button>
-                <button onclick="closeCoach()" title="Close" class="text-slate-400 hover:text-slate-600 px-1"><i class="fas fa-times"></i></button>
+                <button id="coach-undo" onclick="undoCoachFill()" class="hidden text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 hover:bg-amber-100">Undo AI fill</button>
+                <button onclick="resetCoach()" title="Start over" aria-label="Start over" class="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600"><i class="fas fa-rotate-left"></i></button>
+                <button onclick="closeCoach()" title="Close" aria-label="Close coach" class="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-700"><i class="fas fa-times text-lg"></i></button>
             </div>
         </div>
         <div id="coach-log" class="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm"></div>
         <div id="coach-status" class="hidden px-5 py-2 text-[11px] text-slate-500 border-t border-slate-100 loading-shimmer"></div>
+        <!-- Event mode: once the coach has filled the workbook, the next step is right here -->
+        <div id="coach-make-bar" class="hidden p-3 border-t border-emerald-100 bg-emerald-50">
+            <button type="button" onclick="makeMyCards()" class="w-full min-h-[48px] bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60"><i class="fas fa-images mr-2"></i>Make my cards</button>
+        </div>
         <!-- Brain dump: first message -->
         <div id="coach-dump" class="hidden p-4 border-t border-slate-100 space-y-2">
-            <p class="event-only text-[11px] text-slate-500 leading-snug bg-slate-50 border border-slate-200 rounded-lg p-2.5">CrashTest MVP's coach runs on the organiser's laptop and Anthropic's API, so your notes and workbook pass through both. Your coach conversation is kept on the organiser's laptop for this event, and when you press Make my cards or Save, your workbook is saved there too and the organiser can read it. Please don't paste anything confidential.</p>
+            <p class="event-only text-xs text-slate-600 leading-snug bg-slate-50 border border-slate-200 rounded-lg p-2.5">CrashTest MVP's coach runs on the organiser's laptop and Anthropic's API, so your notes and workbook pass through both. Your coach conversation is kept on the organiser's laptop for this event, and when you press Make my cards or Save, your workbook is saved there too and the organiser can read it. Please don't paste anything confidential.</p>
             <textarea id="coach-dump-text" class="w-full p-3 border border-slate-200 rounded-lg text-sm min-h-[220px] focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Paste anything: notes, a pitch draft, customer quotes, an email to a cofounder. The coach maps it into the workbook and tells you what's still weak."></textarea>
             <button id="coach-dump-send" onclick="sendBrainDump()" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg hover:bg-emerald-700 text-sm font-bold disabled:opacity-60">Fill my workbook</button>
         </div>
@@ -804,6 +878,12 @@
             <button id="coach-send" type="submit" class="bg-slate-900 text-white px-4 rounded-lg hover:bg-black text-sm font-semibold disabled:opacity-60">Send</button>
         </form>
     </aside>
+
+    <!-- Event mode on a phone: the two actions an attendee needs stay one tap away -->
+    <div id="event-dock" class="event-dock no-print">
+        <button type="button" onclick="openCoach('office-hours', 'braindump')" class="flex-1 bg-white border border-slate-300 text-slate-800"><i class="fas fa-paste text-emerald-600"></i>Brain dump</button>
+        <button type="button" id="dock-make" onclick="makeMyCards()" class="flex-1 bg-emerald-600 text-white shadow-sm"><i class="fas fa-images"></i>Make my cards</button>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl opacity-0 transition-opacity pointer-events-none z-[250]">
@@ -986,8 +1066,10 @@
             document.addEventListener('mousemove', (e) => { if (isDragging) move(e); });
             document.addEventListener('mouseup', endDrag);
 
-            // Touch - drag the marker on mobile
-            graphEl.addEventListener('touchstart', startDrag, { passive: false });
+            // Touch - drag the marker on mobile. A swipe that starts anywhere else scrolls the page
+            // (it used to move the marker); a tap on the map still places it through the mouse events
+            // the browser sends after a tap.
+            graphEl.addEventListener('touchstart', (e) => { if (e.target.closest('#graph_marker')) startDrag(e); }, { passive: false });
             document.addEventListener('touchmove', (e) => { if (isDragging) move(e); }, { passive: false });
             document.addEventListener('touchend', endDrag);
         }
@@ -1090,7 +1172,19 @@
 
         // Saves to the database. Opens the details form first when it needs a title or name.
         // Event mode: save this workbook for the organiser, then show the share cards.
+        let makingCards = false;
         async function makeMyCards() {
+            if (makingCards) return;   // a double tap must not save the workbook twice
+            makingCards = true;
+            document.querySelectorAll('[onclick="makeMyCards()"]').forEach((b) => { b.disabled = true; b.classList.add('opacity-60'); });
+            try {
+                await makeMyCardsOnce();
+            } finally {
+                makingCards = false;
+                document.querySelectorAll('[onclick="makeMyCards()"]').forEach((b) => { b.disabled = false; b.classList.remove('opacity-60'); });
+            }
+        }
+        async function makeMyCardsOnce() {
             const cardIds = ['card_who', 'card_pain', 'card_need', 'card_before', 'card_after', 'card_pitch'];
             // One brain-dump turn often leaves some card fields empty; draft only those from the workbook.
             if (cardIds.some(id => !document.getElementById(id)?.value.trim())) draftCardsFromWorkbook();
@@ -1513,6 +1607,35 @@
             document.getElementById('modal-content').replaceChildren(p);
         }
 
+        // Phones: save/share/export live in a bottom sheet behind the menu button.
+        function toggleMenu(force) {
+            const open = force === undefined ? !document.body.classList.contains('menu-open') : force;
+            document.body.classList.toggle('menu-open', open);
+            document.getElementById('menu-btn')?.setAttribute('aria-expanded', String(open));
+        }
+        document.getElementById('side-actions').addEventListener('click', (e) => { if (e.target.closest('a, button')) toggleMenu(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false); });
+
+        // Section strip: mark the section on screen (a sticky strip on phones, the sidebar on laptops).
+        (function () {
+            if (!('IntersectionObserver' in window)) return;
+            const links = [...document.querySelectorAll('#side-nav .nav-link')];
+            const byId = new Map(links.map((a) => [a.getAttribute('href').slice(1), a]));
+            const strip = document.querySelector('.nav-scroll');
+            const io = new IntersectionObserver((entries) => {
+                for (const en of entries) {
+                    if (!en.isIntersecting) continue;
+                    const a = byId.get(en.target.id);
+                    links.forEach((l) => l.classList.toggle('active', l === a));
+                    if (a && strip && strip.scrollWidth > strip.clientWidth) {
+                        const left = a.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft - 16;
+                        strip.scrollTo({ left, behavior: 'smooth' });
+                    }
+                }
+            }, { rootMargin: '-20% 0px -70% 0px' });
+            byId.forEach((_, id) => { const sec = document.getElementById(id); if (sec) io.observe(sec); });
+        })();
+
         let toastTimer;
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -1704,6 +1827,8 @@
             document.getElementById('coach-input').disabled = r.busy;
             document.getElementById('coach-dump-send').disabled = r.busy;
             document.getElementById('coach-undo').classList.toggle('hidden', !Object.keys(conv.undo || {}).length);
+            document.getElementById('coach-panel').classList.toggle('dump-first', dumpFirst);
+            document.getElementById('coach-make-bar').classList.toggle('hidden', !(document.body.classList.contains('event-mode') && Object.keys(conv.undo || {}).length));
             const status = document.getElementById('coach-status');
             status.textContent = r.status;
             status.classList.toggle('hidden', !r.status);
@@ -2365,6 +2490,16 @@
                 }
             }
             let timer = 0;
+            // Phones: dots under the swipeable card row show which of the five is on screen.
+            (function () {
+                const grid = document.getElementById('cards-grid'), dots = [...document.querySelectorAll('#cards-dots i')];
+                if (!grid || !dots.length) return;
+                grid.addEventListener('scroll', () => {
+                    const max = grid.scrollWidth - grid.clientWidth;
+                    const i = max > 0 ? Math.round((grid.scrollLeft / max) * (dots.length - 1)) : 0;
+                    dots.forEach((d, k) => d.classList.toggle('on', k === i));
+                }, { passive: true });
+            })();
             window.cardsChanged = function () { clearTimeout(timer); timer = setTimeout(renderCards, 150); };
             window.renderCards = renderCards;
             document.addEventListener('DOMContentLoaded', renderCards);
