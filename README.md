@@ -65,7 +65,7 @@ Attendees open one link and get their own brain-dump coach session on an Anthrop
 - Attendees get office-hours brain dump only (no guided session, CEO review or ChatGPT sign-in). Up to 10 coach turns run at once and one per attendee, with 25 model calls per turn. Question cards pause after 5 minutes and resume when they send a message. A reload resumes their session.
 - Their ideas pass through this laptop and the Anthropic API. The start screen tells them so.
 - Watch the server tab: it logs each turn's cost and any errors.
-- See what people saved at http://127.0.0.1:3000/owner on this laptop. **Make my cards** and **Save** store the workbook.
+- See what people saved at http://127.0.0.1:3000/owner on this laptop. **Make my cards** and **Save** store the workbook. The owner page also shows a big **Scan to join** QR code and link, pre-filled with the live tunnel address (read from cloudflared's local metrics port) and your `EVENT_CODE`, so you can put it straight on a slide.
 - If the server restarts, attendees keep their link and sessions. If the tunnel restarts you get a new address, so re-share it.
 - If the coach breaks for everyone, fall back to cards by hand: attendees fill the card boxes themselves and download, no AI needed.
 
@@ -75,7 +75,7 @@ Attendees open one link and get their own brain-dump coach session on an Anthrop
 2. Revoke or delete the API key in the Console, or check its spend.
 3. Attendee data stays on this laptop in `data/`: coach transcripts in `data/event-claude/`, session bindings and spend in `data/event-state.json`, workbooks in `data/workbooks.db`. Export what you need and delete the rest.
 
-Run `npm test` for the event-mode unit tests. `COACH_MODEL` overrides the attendee model (default `claude-sonnet-5-5`).
+Run `npm test` to run every test in the `test/` folder (9 files, 17 tests). `COACH_MODEL` overrides the attendee model (default `claude-sonnet-5-5`).
 
 **Deploy to Vercel**
 
@@ -112,10 +112,16 @@ Without `OPENAI_CLIENT_ID`, the hosted site works normally and hides its AI feat
 | `GET` | `/api/workbooks/:id` | Read a shared workbook (owner email is never returned) |
 | `PUT` | `/api/workbooks/:id` | Update a workbook; requires `Authorization: Bearer <editToken>` |
 | `GET` | `/api/auth/openai` | Start Sign in with ChatGPT |
+| `GET` | `/api/auth/openai/callback` | Sign in with ChatGPT callback. Locally also served at `/auth/callback`, the path OpenAI's open-source flow requires |
 | `GET` | `/api/auth/me` | Current ChatGPT account and plan-usage status |
 | `POST` | `/api/auth/logout` | Revoke the refresh token and end the session |
 | `POST` | `/api/ai` | Run `{ task: "refine" \| "critique" \| "pitch", prompt }` on the user's ChatGPT plan |
 | `POST` | `/api/export` | Render `{ format: "docx" \| "pdf", title, owner, data }` as a file |
+| `POST` | `/api/coach` | Start or continue a coach session; streams server-sent events. Local owner (your Claude login) or event attendees (brain dump only); everyone else gets 404 |
+| `POST` | `/api/coach/answer` | Answer a coach question card. Same access as `/api/coach` |
+| `GET` | `/api/owner/workbooks` | List workbooks saved during an event (titles and times). Owner on `127.0.0.1` only; others get 404 |
+
+In event mode, `POST /api/workbooks`, `PUT /api/workbooks/:id` and `POST /api/export` return 404 for visitors who don't have the event cookie (the owner is exempt). Reading a shared workbook with `GET` is unaffected.
 
 
 ### License
