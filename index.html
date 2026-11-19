@@ -59,6 +59,8 @@
             resize: vertical;
             min-height: 100px;
         }
+        /* Workbook boxes grow with their text (see autosize), so they never scroll inside. */
+        main textarea { overflow: hidden; resize: none; }
 
         .glass-card {
             background: rgba(255, 255, 255, 0.8);
@@ -984,6 +986,21 @@
             }
         });
 
+        // Workbook text boxes grow to fit what is in them, so nobody scrolls inside a small box.
+        function autosize(el) {
+            if (!el.offsetParent) return;   // hidden boxes measure 0
+            const y = window.scrollY;
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight + (el.offsetHeight - el.clientHeight)) + 'px';
+            if (window.scrollY !== y) window.scrollTo(0, y);
+        }
+        const autosizeAll = () => document.querySelectorAll('main textarea').forEach(autosize);
+        document.addEventListener('input', (e) => { if (e.target.matches?.('main textarea')) autosize(e.target); });
+        let autosizeTimer;
+        window.addEventListener('resize', () => { clearTimeout(autosizeTimer); autosizeTimer = setTimeout(autosizeAll, 120); });
+        window.addEventListener('load', autosizeAll);
+        document.fonts?.ready.then(autosizeAll);
+
         function loadDraft() {
             INPUT_FIELDS.forEach(field => {
                 const val = store.get(field);
@@ -991,6 +1008,7 @@
                 if (el && val !== null) el.value = val;
             });
             graph = { x: parseFloat(store.get('graph_x', 50)), y: parseFloat(store.get('graph_y', 50)) };
+            autosizeAll();
         }
 
         function persistDraft() {
@@ -1018,6 +1036,7 @@
             });
             setMarker(parseFloat(data.graph_x ?? 50), parseFloat(data.graph_y ?? 50));
             calculateRatio();
+            autosizeAll();
             persistDraft();
             if (typeof cardsChanged === 'function') cardsChanged();
         }
@@ -2243,6 +2262,7 @@
             }
             if (graphMoved) setMarker(graph.x, graph.y);
             calculateRatio();
+            autosizeAll();
             save();
             saveConvs();
             updateFillBanner();
@@ -2752,7 +2772,7 @@
                     const text = firstSentence(document.getElementById(source)?.value);
                     if (text) { el.value = text; filled++; } else missing++;
                 }
-                if (filled) save();
+                if (filled) { autosizeAll(); save(); }
                 showToast(filled ? `Drafted ${filled} card${filled > 1 ? 's' : ''} from your workbook.` + (missing ? ` ${missing} still empty; fill those in.` : '') : (missing ? 'Nothing to draft yet. Fill in the workbook above first.' : 'Every card already has text.'));
             };
 
