@@ -851,11 +851,11 @@
     <aside id="coach-panel" class="coach-feature no-print fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white border-l border-slate-200 shadow-2xl z-[190] flex flex-col" aria-label="Coach" aria-hidden="true">
         <div class="pl-5 pr-2 py-2.5 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <div class="min-w-0">
-                <h4 id="coach-title" class="text-base font-bold text-slate-800 truncate">Coach</h4>
+                <h4 id="coach-title" class="text-sm sm:text-base font-bold text-slate-800 truncate">Coach</h4>
                 <p id="coach-subtitle" class="text-[11px] text-slate-500 truncate"></p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <button id="coach-undo" onclick="undoCoachFill()" class="hidden text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 hover:bg-amber-100">Undo AI fill</button>
+                <button id="coach-undo" onclick="undoCoachFill()" class="hidden text-[11px] sm:text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 sm:px-3 py-2 whitespace-nowrap hover:bg-amber-100">Undo AI fill</button>
                 <button onclick="resetCoach()" title="Start over" aria-label="Start over" class="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600"><i class="fas fa-rotate-left"></i></button>
                 <button onclick="closeCoach()" title="Close" aria-label="Close coach" class="w-11 h-11 flex items-center justify-center text-slate-500 hover:text-slate-700"><i class="fas fa-times text-lg"></i></button>
             </div>
