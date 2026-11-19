@@ -14,7 +14,7 @@ function req(host, socket, headers = {}) {
   return r;
 }
 
-test('writeAccess: owner and cookied attendee allowed, cookieless attendee refused, event off allows all', () => {
+test('writeAccess: owner and cookied attendee allowed, cookieless attendee refused, code without key fails closed, event off allows all', () => {
   const saved = { code: process.env.EVENT_CODE, key: process.env.ANTHROPIC_API_KEY };
   try {
     process.env.EVENT_CODE = 'access-code-1';
@@ -28,7 +28,12 @@ test('writeAccess: owner and cookied attendee allowed, cookieless attendee refus
     assert.ok(attendee.attendee);
     assert.equal(ev.writeAccess(req('abc.trycloudflare.com', '127.0.0.1', tunnel)), null);
 
-    delete process.env.ANTHROPIC_API_KEY; // event mode off
+    delete process.env.ANTHROPIC_API_KEY; // EVENT_CODE set but no key: fail closed for everyone but the owner
+    assert.equal(ev.writeAccess(req('abc.trycloudflare.com', '127.0.0.1', tunnel)), null);
+    assert.equal(ev.writeAccess(req('abc.trycloudflare.com', '127.0.0.1', { ...tunnel, cookie: value })), null);
+    assert.deepEqual(ev.writeAccess(req('127.0.0.1:3000', '127.0.0.1')), { event: null, attendee: null });
+
+    delete process.env.EVENT_CODE; // event mode not requested: open as before
     assert.deepEqual(ev.writeAccess(req('abc.trycloudflare.com', '127.0.0.1', tunnel)), { event: null, attendee: null });
   } finally {
     for (const [k, v] of [['EVENT_CODE', saved.code], ['ANTHROPIC_API_KEY', saved.key]]) {

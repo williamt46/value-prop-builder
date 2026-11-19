@@ -2,7 +2,7 @@
 // Web-standard handlers Vercel runs. Usage: npm run dev
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { attendeeCookie, codeMatches, eventEnabled, isOwner, tagRequest } from './lib/event.js';
+import { attendeeCookie, attendeeId, codeMatches, eventEnabled, eventRequested, isOwner, tagRequest } from './lib/event.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 // Loopback only by default: the server can hold a ChatGPT session. HOST=0.0.0.0 to expose it.
@@ -144,11 +144,10 @@ async function handle(req, res) {
     if (code !== null && eventEnabled() && codeMatches(code)) {
       const request = await toRequest(req, res);
       url.searchParams.delete('e');
-      res.writeHead(302, {
-        Location: url.pathname + (url.search || ''),
-        'Set-Cookie': attendeeCookie(request),
-        'Cache-Control': 'no-store',
-      });
+      const headers = { Location: url.pathname + (url.search || ''), 'Cache-Control': 'no-store' };
+      // Keep an attendee's existing identity: re-opening the link must not mint a fresh one.
+      if (!attendeeId(request)) headers['Set-Cookie'] = attendeeCookie(request);
+      res.writeHead(302, headers);
       return res.end();
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -183,4 +182,5 @@ http.createServer(async (req, res) => {
 }).listen(PORT, HOST, () => {
   console.log(`CrashTest MVP running at http://127.0.0.1:${PORT}`);
   if (eventEnabled()) console.log('Event mode ON: attendees open /?e=<code>. Owner page: http://127.0.0.1:' + PORT + '/owner');
+  else if (eventRequested()) console.warn('Event mode OFF: EVENT_CODE is set but ANTHROPIC_API_KEY is missing. Attendees cannot join or save until it is set.');
 });

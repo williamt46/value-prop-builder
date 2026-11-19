@@ -1,4 +1,5 @@
 import { test, before, beforeEach } from 'node:test';
+import { createHmac } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -49,9 +50,16 @@ test('attendee cookie: valid verifies, tampered or other-code cookie rejected', 
   assert.equal(ev.isEventVisitor(visitor), true);
   const tampered = req('abc.trycloudflare.com', '127.0.0.1', { cookie: value.slice(0, -2) + 'xx' });
   assert.equal(ev.attendeeId(tampered), null);
+  // An attendee knows the code, so a cookie signed with the code alone must not verify.
+  const id = 'forged-id';
+  const forged = `vp_event=${id}.${createHmac('sha256', 'test-code-1234').update(id).digest('base64url')}`;
+  assert.equal(ev.attendeeId(req('abc.trycloudflare.com', '127.0.0.1', { cookie: forged })), null);
   process.env.EVENT_CODE = 'another-code-99';
-  assert.equal(ev.attendeeId(visitor), null);
-  process.env.EVENT_CODE = 'test-code-1234';
+  try {
+    assert.equal(ev.attendeeId(visitor), null);
+  } finally {
+    process.env.EVENT_CODE = 'test-code-1234';
+  }
 });
 
 test('caps: one turn per attendee, ten in total, release frees the slot', () => {
